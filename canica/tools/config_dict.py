@@ -8,20 +8,12 @@ persisted to file.
 import re
 import warnings
 
-class ConfigDict(dict):
+from .bunch import Bunch
+
+class ConfigDict(Bunch):
     """ Dictionnary-like object that exposes its keys as attributes, and
         can be persisted to file.
     """
-
-    def __init__(self, **kwargs):
-        """ >>> c = ConfigDict(a=1)
-            >>> 'a' in c
-            True
-            >>> c.a == c['a']
-            True
-        """
-        dict.__init__(self, **kwargs)
-        self.__dict__ = self
 
     def tofile(self, filename):
         """ Save the configuration to file.
@@ -57,17 +49,3 @@ class ConfigDict(dict):
         return self
 
 
-def test_config_dict():
-    b = ConfigDict(a=1)
-    b.c = 'c'
-    assert b.keys() == ['a', 'c', ]
-    b.d = 1.
-    b.e = True
-    import tempfile
-    tmpfile = tempfile.mktemp()
-    b.tofile(tmpfile)
-    c = ConfigDict().fromfile(tmpfile)
-    assert c.items() == b.items()
-
-if __name__ == '__main__':
-    test_config_dict()

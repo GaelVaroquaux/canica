@@ -12,6 +12,12 @@ class Bunch(dict):
     """
 
     def __init__(self, *args, **kwargs):
+        """ >>> c = Bunch(a=1)
+            >>> 'a' in c
+            True
+            >>> c.a == c['a']
+            True
+        """
         self.__dict__ = self
         dict.__init__(self, *args, **kwargs)
 

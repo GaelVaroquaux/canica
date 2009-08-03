@@ -1,6 +1,6 @@
 import os
 
-from tools.config_dict import ConfigDict
+from .config_dict import ConfigDict
 
 class IOContext(ConfigDict):
 
