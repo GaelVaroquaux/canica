@@ -1,8 +1,12 @@
-# Author: Pierre Lafaye de Micheaux, Stefan van der Walt
-# Python FastICA
-# License: GPL unless permission obtained otherwise
-# Look at algorithms in Tables 8.3 and 8.4 page 196 in the book: Independent Component Analysis, by Aapo et al.
+"""
+Python implement of the 3 fast ICA algorithms.
 
+Reference: Tables 8.3 and 8.4 page 196 in the book:
+Independent Component Analysis, by  Hyvarinen et al.
+"""
+
+# Author: Pierre Lafaye de Micheaux, Stefan van der Walt, Gael Varoquaux
+# License: BSD 3 clause
 import numpy as np
 import types
 
@@ -152,16 +156,17 @@ def fastica(X, n_comp=None,
     --------
 
     >>> X = np.array(
-    [[5.,1.4,1.9,0], \
-    [2,5.4,8.,1.1], \
-    [3,6.4,9,1.2]])
-    >>> w_init = np.array([[1,4],[7,2]])
+    ... [[ 5, 1.4, 1.9,   0], 
+    ...  [ 2, 5.4,  8., 1.1],
+    ...  [ 3, 6.4,  9., 1.2]])
+    >>> w_init = np.array([[1, 4], [7, 2]])
     >>> n_comp = 2
     >>> k, W, S = fastica(X, n_comp, algorithm='parallel', w_init=w_init)
     >>> print S
-    [[-0.02387286 -1.41401205]
-     [ 1.23650679  0.68633152]
-     [-1.21263393  0.72768053]]
+    [[-0.1608589   0.80049427]
+     [ 0.77367782 -0.26093925]
+     [-0.61281893 -0.53955503]]
+
 
     Notes
     -----
@@ -179,6 +184,8 @@ def fastica(X, n_comp=None,
       pp. 411-430
 
     """
+    # XXX: The above doctest is probably very sensitive to numerical
+    # noise.
     algorithm_funcs = {'parallel': _ica_par,
                        'deflation': _ica_def}
 
