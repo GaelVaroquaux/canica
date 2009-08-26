@@ -17,7 +17,7 @@ class PMap(object):
     def __init__(self, n_jobs=None):
         self.n_jobs = n_jobs    
 
-    def __call__(self, function, *arguments):
+    def __call__(self, function, *arg_list, **kwargs):
         # Try to pickle the input function, to catch the problems early,
         # in the main thread, rather than in the child processes, where
         # error management is impossible.
@@ -31,8 +31,8 @@ class PMap(object):
             pool = multiprocessing.Pool(n_jobs)
             apply = pool.apply_async
         output = list()
-        for these_arguments in itertools.izip(*arguments):
-            output.append(apply(function, these_arguments))
+        for these_arguments in itertools.izip(*arg_list):
+            output.append(apply(function, these_arguments, kwargs))
         if n_jobs > 1:
             output = [job.get() for job in output]
             pool.close()

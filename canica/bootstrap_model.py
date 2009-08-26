@@ -1,19 +1,12 @@
-# XXX !!! This is a modified copy of 'half_split'
 
 import os
 import random
 
 import numpy as np
 
-from validate_model import generate_icas, this_config
+# XXX: The code does not actually run
+#from validate_model import generate_icas, this_config
 
-from joblib import PrintTime
-from rs.io_context import IOContext
-
-## Avoid side effects with other bits of code.
-#this_config = this_config.copy()
-#this_config['output_dir'] = '~/data-nonsync/half_split'
-#this_config = IOContext(extra_options=this_config)
 
 print_time = PrintTime()
 

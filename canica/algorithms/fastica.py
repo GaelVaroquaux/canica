@@ -1,5 +1,5 @@
 """
-Python implement of the 3 fast ICA algorithms.
+Python implementation of the fast ICA algorithms.
 
 Reference: Tables 8.3 and 8.4 page 196 in the book:
 Independent Component Analysis, by  Hyvarinen et al.
@@ -186,6 +186,7 @@ def fastica(X, n_comp=None,
     """
     # XXX: The above doctest is probably very sensitive to numerical
     # noise.
+    # XXX: The above doctest does not work with deflation approach.
     algorithm_funcs = {'parallel': _ica_par,
                        'deflation': _ica_def}
 
