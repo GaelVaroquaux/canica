@@ -1,11 +1,7 @@
-#!/usr/bin/env python
-"""
-Temporary package.
-"""
 
 import sys
 import os
-from distutils import setup
+from distutils.core import setup
 
 ################################################################################
 # For some commands, use setuptools
@@ -28,7 +24,7 @@ def find_packages():
     for root, dirs, files in os.walk('.'):
         if '__init__.py' in files:
             package_path = '.'.join(root.split('/')[1:])
-            out_list.append(out_list)
+            out_list.append(package_path)
     return out_list
 
 

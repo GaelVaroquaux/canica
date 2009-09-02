@@ -7,9 +7,11 @@ Independent Component Analysis, by  Hyvarinen et al.
 
 # Author: Pierre Lafaye de Micheaux, Stefan van der Walt, Gael Varoquaux
 # License: BSD 3 clause
+
 import numpy as np
 import types
 
+from .common import center_and_norm
 
 __all__ = ['fastica']
 
