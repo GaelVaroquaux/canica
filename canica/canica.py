@@ -67,25 +67,25 @@ def ica_after_cca(pcas, ccs_threshold=1.6, working_dir=None):
     cca_maps, ccs, _ = svd(pcas, full_matrices=False)
     n_cca_components = np.argmin(ccs > ccs_threshold)
     cca_maps = cca_maps[:, :n_cca_components]
-    _, common_icas = fastica(cca_maps.T, 
-                                n_cca_components, whiten=False)
-    common_icas = common_icas.T
-    print common_icas.shape
-    stop
-    # Normalize to 1 the ICA maps:
-    normed_icas = common_icas/float(cca_maps.shape[0])
+
+    # We do a spatial ICA: the arrays are transposed in the following, 
+    # axis1 = component, and axis2 is voxel number.
+    _, common_icas = memory.cache(fastica)(cca_maps.T, 
+                                           n_cca_components, whiten=False)
 
     # Project the ICAs on the CCA maps to give a 'cross-subject
     # reproducibility' score.
-    proj = np.dot(normed_icas, cca_maps[:, :n_cca_components])
+    proj = np.dot(common_icas, cca_maps[:, :n_cca_components])
     reproducibility_score = (np.abs(proj)*ccs[:n_cca_components]).sum(axis=-1)
 
     order = np.argsort(reproducibility_score)[::-1]
 
     common_icas = common_icas[order, :]
 
-    return common_icas
+    return common_icas.T
 
+################################################################################
+# Thresholding and post-processing
 
 ################################################################################
 # Actual estimation of the complete CanICA model
@@ -98,7 +98,7 @@ def canica(filenames, n_pca_components, ccs_threshold, n_jobs=1,
     pcas, mask, _ = intra_subject_pcas(filenames, n_jobs=n_jobs, 
                                         working_dir=working_dir)
 
-    # The group principal components
+    # The group principal components (concatenated subject PCs)
     # Use asarray to cast to a non memmapped array
     pcas = np.asarray([pca[:, :n_pca_components].T for pca in pcas]).T
 

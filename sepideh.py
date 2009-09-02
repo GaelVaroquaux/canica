@@ -32,7 +32,7 @@ session_files = super_glob(
     os.path.expanduser(
             '~/data/data/subject%(subject)i/functional/fMRI/session1/sw*.hdr'
     ),
-    subject=range(1, 3),
+    subject=range(1, 13),
   )
 
 print_time = PrintTime()
@@ -41,36 +41,39 @@ print_time = PrintTime()
 #-------------------------------------------------------------------------
 # XXX: Absolute hack in the ccs_threshold
 common_icas, mask = canica.canica(session_files, 
-                                  n_pca_components=75,
+                                  n_pca_components=50,
                                   ccs_threshold=0.14*len(session_files),
-                                  working_dir=WORKING_DIR)
+                                  working_dir=WORKING_DIR,
+                                  n_jobs=-1)
 
 print_time('Computing common ICA decomposition')
 
 #-------------------------------------------------------------------------
 # Save output maps to nifti
 #-------------------------------------------------------------------------
+
+# First retrieve the header of the original data.
 fmri_header = nifti.NiftiImage(session_files[0][0]).header
 sform = fmri_header['sform']
 
 from fff2.viz import activation_maps as am
 import pylab as pl
 
-def auto_sign(map):
-    positiv_mass = (map > 0).sum()
-    negativ_mass = (map < 0).sum()
+def auto_sign(map, threshold=0):
+    positiv_mass = (map > threshold).sum()
+    negativ_mass = (map < threshold).sum()
     if negativ_mass > positiv_mass:
         return -1
     return 1
 
 # Simple heuristic for thresholding
 p_value = 5e-3
-threshold = stats.norm.isf(0.5*p_value)/np.sqrt(common_icas.shape[1])
-common_icas_no_thr = common_icas
-common_icas = common_icas.copy()
-common_icas[np.abs(common_icas) < threshold] = 0
+threshold = stats.norm.isf(0.5*p_value)/np.sqrt(common_icas.shape[0])
 
-if 0:
+# put in order n_ic, n_voxels
+common_icas = common_icas.T
+
+if 1:
     if not os.path.exists(WORKING_DIR):
         os.mkdir(WORKING_DIR)
 
@@ -93,25 +96,22 @@ if 0:
                         (1.0, 1.0, 1.0))
             }
 
-    cmap = mp.colors.LinearSegmentedColormap('my_colormap',cdict,512)
+    cmap = mp.colors.LinearSegmentedColormap('my_colormap', cdict, 512)
 
-
-    for index, (ic, ic_no_thr) in enumerate(
-                zip(common_icas, common_icas_no_thr)):
+    for index, ic in enumerate(common_icas):
         print 'Outputing map %i out of %i' % (index, len(common_icas)) 
         this_map = np.zeros(mask.shape)
-        this_map[mask] = ic_no_thr
-        this_map *= auto_sign(this_map)
+        this_map[mask] = ic
+        # Modify the 3D map rather than the IC to avoid modifying
+        # the original data.
+        this_map *= auto_sign(ic, threshold=threshold)
         this_header = fmri_header.copy()
         this_header['intent_name'] = 'IC'
         nifti.NiftiImage(this_map.T, this_header).save(
-                                WORKING_DIR + 'ic_no_thr%02i.nii' % index
+                                WORKING_DIR + '/ic_no_thr%02i.nii' % index
                             )
         
-        this_map[mask] = ic
-        this_map *= auto_sign(this_map)
-        this_header = fmri_header.copy()
-        this_header['intent_name'] = 'IC'
+        this_map[this_map < threshold] = 0
         nifti.NiftiImage(this_map.T, this_header).save(
                                 WORKING_DIR + 'ic%02i.nii' % index
                             )

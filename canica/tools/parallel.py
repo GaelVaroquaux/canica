@@ -13,6 +13,7 @@ except ImportError:
 import functools
 import pickle
 
+
 def delayed(function):
     """ Decorator used to capture the arguments of a function.
     """
@@ -49,6 +50,8 @@ class Parallel(object):
             n_jobs = 1
             from __builtin__ import apply
         else:
+            if n_jobs == -1:
+                n_jobs = multiprocessing.cpu_count()
             pool = multiprocessing.Pool(n_jobs)
             apply = pool.apply_async
 
