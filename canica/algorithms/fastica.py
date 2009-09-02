@@ -11,8 +11,6 @@ Independent Component Analysis, by  Hyvarinen et al.
 import numpy as np
 import types
 
-from .common import center_and_norm
-
 __all__ = ['fastica']
 
 
@@ -217,7 +215,7 @@ def fastica(X, n_comp=None,
         else:
             raise ValueError(
                         'fun argument should be one of logcosh, exp or cube')
-    elif type(fun) is not types.FunctionType:
+    elif callable(fun):
         raise ValueError('fun argument should be either a string '
                          '(one of logcosh, exp or cube) or a function') 
     else:
