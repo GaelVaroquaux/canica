@@ -17,6 +17,7 @@ def test_fastica(demo=False, figure=None):
             If demo is True, plot a figure to illustrate the algorithm
         figure: int, option
     """
+
     n_samples = 1000
     # Generate two sources:
     t  = np.linspace(0, 100, n_samples)
@@ -32,12 +33,12 @@ def test_fastica(demo=False, figure=None):
                        [np.sin(phi), -np.cos(phi)]])
     m  = np.dot(mixing, s)
     center_and_norm(m)
-    k_, mixing_, s_ = fastica(m.T)
-    k_ = k_.T
-    mixing_ = mixing_.T
-    s_ = s_.T
-    center_and_norm(s_)
+    k_, mixing_, s_ = fastica(m)
 
+    # Check that the mixing model described in the docstring holds:
+    np.testing.assert_almost_equal(s_, np.dot(np.dot(mixing_, k_), m))
+
+    center_and_norm(s_)
     s1_, s2_ = s_
     # Check to see if the sources have been estimated in the wrong order
     if abs(np.dot(s1_, s2)) > abs(np.dot(s1_, s1)):
@@ -45,9 +46,10 @@ def test_fastica(demo=False, figure=None):
     s1_ *= np.sign(np.dot(s1_, s1))
     s2_ *= np.sign(np.dot(s2_, s2))
 
-    # We don't use 'yield' to be able to run this outside of nose.
+    # Check that we have estimated the original sources
     np.testing.assert_almost_equal(np.dot(s1_, s1)/n_samples, 1, decimal=3)
     np.testing.assert_almost_equal(np.dot(s2_, s2)/n_samples, 1, decimal=3)
+
 
     if demo:
         import pylab as pl
@@ -65,4 +67,6 @@ def test_fastica(demo=False, figure=None):
 
 if __name__ == '__main__':
     test_fastica(demo=True)
+    import pylab as pl
+    pl.show()
 

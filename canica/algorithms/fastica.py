@@ -69,7 +69,7 @@ def _sym_decorrelation(W):
     # the eigenvalues) of W * W.T 
     u, W = [np.asmatrix(e) for e in (u, W)]
     W = (u * np.diag(1.0/np.sqrt(s)) * u.T) * W  # W = (W * W.T) ^{-1/2} * W
-    return W
+    return np.asarray(W)
 
 
 def _ica_par(X, tol, g, gprime, fun_args, maxit, w_init):
@@ -78,15 +78,15 @@ def _ica_par(X, tol, g, gprime, fun_args, maxit, w_init):
     Used internally by FastICA.
 
     """
-    n,p = X.shape
-    
+    n, p = X.shape
+
     W = _sym_decorrelation(w_init)
 
     # we set lim to tol+1 to be sure to enter at least once in next while
     lim = tol + 1 
     it = 0
     while ((lim > tol) and (it < (maxit-1))):
-        wtx = np.dot(W, X).A  # .A transforms to array type
+        wtx = np.dot(W, X)
         gwtx = g(wtx, fun_args)
         g_wtx = gprime(wtx, fun_args)
         W1 = np.dot(gwtx, X.T)/float(p) - np.dot(np.diag(g_wtx.mean(axis=1)), W)
@@ -95,7 +95,7 @@ def _ica_par(X, tol, g, gprime, fun_args, maxit, w_init):
         
         lim = max(abs(abs(np.diag(np.dot(W1, W.T))) - 1))
         W = W1
-        it = it + 1
+        it += 1
 
     return W
 
@@ -107,7 +107,7 @@ def fastica(X, n_comp=None,
 
     Parameters
     ----------
-    X : (n,p) array
+    X : (p, n) array
         Array with n observations (statistical units) measured on p variables.
     n_comp : int, optional
         Number of components to extract. If None no dimension reduction
@@ -143,15 +143,15 @@ def fastica(X, n_comp=None,
 
     Results
     -------
-    K : (p,n_comp) array
+    K : (n_comp, p) array
         pre-whitening matrix that projects data onto th first n.comp
         principal components. Returned only if whiten is True
-    W : (n_comp,n_comp) array
+    W : (n_comp, n_comp) array
         estimated un-mixing matrix
         The mixing matrix can be obtained by::
             w = np.asmatrix(W) * K.T
             A = w.T * (w * w.T).I
-    S : (n,n_comp) array
+    S : (n_comp, n) array
         estimated source matrix
 
     Examples
@@ -162,8 +162,7 @@ def fastica(X, n_comp=None,
     ...  [ 2, 5.4,  8., 1.1],
     ...  [ 3, 6.4,  9., 1.2]])
     >>> w_init = np.array([[1, 4], [7, 2]])
-    >>> n_comp = 2
-    >>> k, W, S = fastica(X, n_comp, algorithm='parallel', w_init=w_init)
+    >>> K, W, S = fastica(X, n_comp=2, algorithm='parallel', w_init=w_init)
     >>> print S
     [[-0.1608589   0.80049427]
      [ 0.77367782 -0.26093925]
@@ -177,7 +176,7 @@ def fastica(X, n_comp=None,
     non-Gaussian (independent) components i.e. X = SA where columns of S
     contain the independent components and A is a linear mixing
     matrix. In short ICA attempts to `un-mix' the data by estimating an
-    un-mixing matrix W where XW = S.
+    un-mixing matrix W where S = W K X.
 
     Implemented using FastICA:
 
@@ -227,7 +226,7 @@ def fastica(X, n_comp=None,
         def gprime(x, fun_args):
             return fun_prime(x, **fun_args)
 
-    n, p = X.shape
+    p, n = X.shape
 
     if n_comp is None:
         n_comp = min(n, p)
@@ -238,19 +237,20 @@ def fastica(X, n_comp=None,
 
     if whiten:
         # Centering the columns (ie the variables)
-        X = X - X.mean(axis=0)
+        X = X - X.mean(axis=-1)[:, np.newaxis]
 
         # Whitening and preprocessing by PCA
-        _, d, v = np.linalg.svd(X, full_matrices=False)
+        u, d, _ = np.linalg.svd(X, full_matrices=False)
         del _
         # XXX: Maybe we could provide a mean to estimate n_comp if it has not 
         # been provided ??? So that we do not have to perform another PCA 
         # before calling fastica ???
-        K = (v/d[:, np.newaxis])[:n_comp]  # see (6.33) p.140
-        del v, d
-        X1 = np.dot(K, X.T) # see (13.6) p.267 Here X1 is white and data in X has been projected onto a subspace by PCA
+        K = (u/d)[:n_comp]  # see (6.33) p.140
+        del u, d
+        X1 = np.dot(K, X) # see (13.6) p.267 Here X1 is white and data 
+        # in X has been projected onto a subspace by PCA
     else:
-        X1 = X.T.copy()
+        X1 = X.copy()
     X1 *= np.sqrt(n)
 
     if w_init is None:
@@ -274,10 +274,10 @@ def fastica(X, n_comp=None,
     del X1
 
     if whiten:
-        S = np.dot(np.asmatrix(W) * K, X.T)
-        return [np.asarray(e.T) for e in (K, W, S)]
+        S = np.dot(np.dot(W, K), X)
+        return K, W, S
     else:
-        S = np.dot(W, X.T)
-        return [np.asarray(e.T) for e in (W, S)]
+        S = np.dot(W, X)
+        return W, S
 
 
