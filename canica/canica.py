@@ -37,8 +37,8 @@ def session_pca(raw_filenames, mask):
     return components, loadings
 
 
-def intra_subject_pcas(session_files, mask=None, n_jobs=1,
-                            working_dir=None):
+def extract_subject_components(session_files, mask=None, n_jobs=1,
+                                              working_dir=None):
     """ Calculate principal components over different subjects.
     """
     # If working_dir is None, the Memory object is transparent.
@@ -46,7 +46,8 @@ def intra_subject_pcas(session_files, mask=None, n_jobs=1,
     cache = memory.cache
 
     # extract the common mask. 
-    mask = cache(mask_utils.compute_mask_sessions)(session_files)
+    if mask is None:
+        mask = cache(mask_utils.compute_mask_sessions)(session_files)
 
     # Spread the load on multiple CPUs
     pca = delayed(cache(session_pca))
@@ -61,24 +62,16 @@ def intra_subject_pcas(session_files, mask=None, n_jobs=1,
 ################################################################################
 # Group-level analysis: inter-subject extraction of ICA maps
 
-def ica_after_cca(pcas, ccs_threshold=None, working_dir=None,
-                n_ica_components=None, cca=True):
+def ica_step(group_maps, group_variance, working_dir=None):
     memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
-    svd = memory.cache(np.linalg.svd)
-    cca_maps, ccs, _ = svd(pcas, full_matrices=False)
-    if n_ica_components is None:
-        n_ica_components = np.argmin(ccs > ccs_threshold)
-    cca_maps = cca_maps[:, :n_ica_components]
-
     # We do a spatial ICA: the arrays are transposed in the following, 
     # axis1 = component, and axis2 is voxel number.
-    _, ica_maps = memory.cache(fastica)(cca_maps.T, 
-                                           n_ica_components, whiten=False)
+    _, ica_maps = memory.cache(fastica)(group_maps.T, whiten=False)
 
-    # Project the ICAs on the CCA maps to give a 'cross-subject
+    # Project the ICAs on the group maps to give a 'cross-subject
     # reproducibility' score.
-    proj = np.dot(ica_maps, cca_maps[:, :n_ica_components])
-    reproducibility_score = (np.abs(proj)*ccs[:n_ica_components]).sum(axis=-1)
+    proj = np.dot(ica_maps, group_maps)
+    reproducibility_score = (np.abs(proj)*group_variance).sum(axis=-1)
 
     order = np.argsort(reproducibility_score)[::-1]
 
@@ -86,14 +79,38 @@ def ica_after_cca(pcas, ccs_threshold=None, working_dir=None,
 
     return ica_maps.T
 
-################################################################################
-# Thresholding and post-processing
+
+def extract_group_components(subject_components, variances, 
+                ccs_threshold=None, n_group_components=None, do_cca=True,
+                working_dir=None):
+    # Use asarray to cast to a non memmapped array
+    subject_components = np.asarray(subject_components)
+
+    if not do_cca:
+        for component, variance in zip(subject_components, variances):
+            component *= variance[:, np.newaxis]
+
+    # The group components (concatenated subject components)
+    group_components = subject_components.T
+    group_components = np.reshape(group_components, 
+                                    (group_components.shape[0], -1))
+
+    # Inter-subject CCA 
+    memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
+    svd = memory.cache(np.linalg.svd)
+    cca_maps, ccs, _ = svd(group_components, full_matrices=False)
+    if n_group_components is None:
+        n_group_components = np.argmin(ccs > ccs_threshold)
+    cca_maps = cca_maps[:, :n_group_components]
+    ccs = ccs[:n_group_components]
+    return cca_maps, ccs
+
 
 ################################################################################
 # Actual estimation of the complete CanICA model
 
 def canica(filenames, n_pca_components, ccs_threshold=None,
-                n_ica_components=None, cca=True,
+                n_ica_components=None, do_cca=True, mask=None,
                 threshold_p_value=5e-3,
                 n_jobs=1, working_dir=None):
     """ CanICA
@@ -107,9 +124,11 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
             analysis.
         n_ica_components: float, optional
             Number of ICA to retain.
-        cca: boolean, optional
+        do_cca: boolean, optional
             If True, a canonical correlations analysis (CCA) is used to
             go from the subject patterns to the group model.
+        mask: 3D boolean ndarray, optional
+            The mask to use to extract the interesting time series.
         threshold_p_value, float, optional
             The P value to use while thresholding the final ICA maps.
         n_jobs: int, optional
@@ -126,25 +145,28 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     if n_ica_components is None and ccs_threshold is None:
         raise ValueError('You need to specify either a number of '
             'ICA components, or a threshold for the canonical correlations')
-    # First level analysis
-    pcas, mask, variances = intra_subject_pcas(filenames, n_jobs=n_jobs, 
-                                        working_dir=working_dir)
+    
+    pcas, mask, variances = extract_subject_components(filenames, 
+                                                       n_jobs=n_jobs, 
+                                                       mask=mask,
+                                                       working_dir=working_dir)
 
-    if not cca:
-        for pca, variance in zip(pcas, variances):
-            pca *= variance
+    # Use np.asarray to get rid of memmapped arrays
+    pcas = [np.asarray(pca[:, :n_pca_components].T) for pca in pcas]
+    variances = [np.asarray(variance[:n_pca_components]) 
+                                            for variance in variances]
 
-    # The group principal components (concatenated subject PCs)
-    # Use asarray to cast to a non memmapped array
-    pcas = np.asarray([pca[:, :n_pca_components].T for pca in pcas]).T
+    group_components, group_variance = extract_group_components(pcas, 
+                                        variances, ccs_threshold=ccs_threshold, 
+                                        n_group_components=n_ica_components, 
+                                        do_cca=do_cca, working_dir=working_dir)
 
-    pcas = np.reshape(pcas, (pcas.shape[0], -1))
-    # Inter-subject CCA and ICA 
-    ica_maps = ica_after_cca(pcas, ccs_threshold=ccs_threshold,
-                                      n_ica_components=n_ica_components,
-                                      working_dir=working_dir)
+    ica_maps = ica_step(group_components, group_variance,
+                                          working_dir=working_dir)
 
-    threshold = stats.norm.isf(0.5*threshold_p_value)/np.sqrt(icas.shape[0])
+    threshold = (stats.norm.isf(0.5*threshold_p_value)
+                                /np.sqrt(ica_maps.shape[0]))
 
     return ica_maps, mask, threshold
+
 

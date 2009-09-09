@@ -43,7 +43,7 @@ def auto_sign(map, threshold=0):
     return 1
 
 
-def save_ics(icas, mask, threshold, output_dir, header):
+def save_ics(icas, mask, threshold, output_dir, header, titles=None):
     # put in order n_ic, n_voxels
     icas = icas.T
 
@@ -77,8 +77,12 @@ def save_ics(icas, mask, threshold, output_dir, header):
             # Ugly trick to force the colormap to be symetric:
             map3d[0, 0, 0] = -map3d.max()
             map3d = np.ma.masked_equal(map3d, 0, copy=False)
+            if titles is not None:
+                title = titles[index]
+            else:
+                title = ''
             am.plot_map_2d(map3d, sform, (x, y, z), figure_num=512,
-                                                                cmap=cmap)
+                                                    title=title, cmap=cmap)
         else:
             pl.clf()
         pl.savefig(pjoin(output_dir, 'map_%02i.png' % index))
