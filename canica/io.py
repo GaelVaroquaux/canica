@@ -7,7 +7,7 @@ import numpy as np
 
 # Neuroimaging library imports
 import nipy.neurospin.utils.mask as mask_utils
-
+from nipy.io.imageformats import load
 
 ################################################################################
 # Series and mask extraction 
@@ -34,7 +34,7 @@ def series_from_mask(session_files, mask):
                                     np.float32)
     for session_index, filenames in enumerate(session_files):
         for file_index, filename in enumerate(filenames):
-            data = mask_utils.load_nifti(filename).asarray().T
+            data = load(filename).get_data()
                 
             session_series[session_index, :, file_index] = \
                             data[mask].astype(np.float32)

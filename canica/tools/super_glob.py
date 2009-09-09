@@ -9,10 +9,12 @@ import glob
 class SuperGlober(object):
     """ A callable object that lists filenames according to a pattern
         with string substitutions.
+
+        In the given path, '~' are expanded to the user home directory.
     """
 
     def __init__(self, pattern):
-        self.pattern = pattern
+        self.pattern = os.path.expanduser(pattern)
 
     def __call__(self, **substitutions):
         filenames = self._expand_substitutions(substitutions)
