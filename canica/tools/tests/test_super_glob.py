@@ -37,8 +37,8 @@ def test_super_glob_subs():
                                        ext='a')
                             )
 
-def test_super_glob_subs():
-    """ Test the super_glob on a simple list subsitution.
+def test_super_glob_multi_subs():
+    """ Test the super_glob on multiple list subsitution.
     """
     nose.tools.assert_equal(
                             [[pjoin(dirname, f) for f 

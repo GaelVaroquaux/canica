@@ -29,8 +29,15 @@ def session_pca(raw_filenames, mask):
         single session.
     """
     # Data preprocessing and loading.
+    # XXX: series_from_mask should go in nipy.neurospin.utils.mask
     series = series_from_mask([raw_filenames, ], mask)
 
+    # XXX: this should go in series_from_mask
+    series -= series.mean(axis=-1)[:, np.newaxis]
+    std = series.std(axis=-1)
+    std[std==0] = 1
+    series /= std[:, np.newaxis]
+    del std
     # PCA
     components, loadings, _ = np.linalg.svd(series, full_matrices=False)
 
@@ -89,16 +96,21 @@ def extract_group_components(subject_components, variances,
     if not do_cca:
         for component, variance in zip(subject_components, variances):
             component *= variance[:, np.newaxis]
+        del component, variance
 
     # The group components (concatenated subject components)
     group_components = subject_components.T
     group_components = np.reshape(group_components, 
                                     (group_components.shape[0], -1))
+    # Save memory
+    del subject_components
 
     # Inter-subject CCA 
     memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
     svd = memory.cache(np.linalg.svd)
     cca_maps, ccs, _ = svd(group_components, full_matrices=False)
+    # Save memory
+    del group_components
     if n_group_components is None:
         n_group_components = np.argmin(ccs > ccs_threshold)
     cca_maps = cca_maps[:, :n_group_components]

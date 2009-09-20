@@ -43,7 +43,8 @@ def auto_sign(map, threshold=0):
     return 1
 
 
-def save_ics(icas, mask, threshold, output_dir, header, titles=None):
+def save_ics(icas, mask, threshold, output_dir, header, titles=None,
+                format='png'):
     # put in order n_ic, n_voxels
     icas = icas.T
 
@@ -85,7 +86,7 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None):
                                                     title=title, cmap=cmap)
         else:
             pl.clf()
-        pl.savefig(pjoin(output_dir, 'map_%02i.png' % index))
+        pl.savefig(pjoin(output_dir, 'map_%02i.%s' % (index, format)))
 
 
 # EOF ##########################################################################

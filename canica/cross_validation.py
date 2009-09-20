@@ -155,10 +155,11 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
     these_files = copy.copy(filenames)
     n_group1 = len(these_files)/2
     pairs = list()
-    # XXX: Needs to be removed.
-    random.seed(1)
+    # For reproducibility, use our own pseudo random number generator,
+    # with a controlled seed
+    prng = random.Random(1)
     for _ in range(n_split_half):
-        random.shuffle(these_files)
+        prng.shuffle(these_files)
         pairs.append((these_files[:n_group1], these_files[n_group1:]))
 
     # Calculation correlation and reproducibility for each pair
