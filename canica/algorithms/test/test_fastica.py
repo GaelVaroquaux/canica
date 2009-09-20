@@ -4,9 +4,11 @@ Test the fastica algorithm.
 
 import numpy as np
 
-# No relative import to be able to run this file.
-#from ..fastica import fastica, center_and_norm
-from canica.algorithms.fastica import fastica, center_and_norm
+# No relative import to be able to run this file as a demo
+#from ..fastica import fastica
+#from ..common import center_and_norm
+from canica.algorithms.fastica import fastica
+from canica.algorithms.common import center_and_norm 
 
 def test_fastica(demo=False, figure=None):
     """ Test the FastICA algorithm on very simple data.

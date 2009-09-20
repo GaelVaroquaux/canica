@@ -152,20 +152,6 @@ def fastica(X, n_comp=None,
     S : (n_comp, n) array
         estimated source matrix
 
-    Examples
-    --------
-
-    >>> X = np.array(
-    ... [[ 5, 1.4, 1.9,   0], 
-    ...  [ 2, 5.4,  8., 1.1],
-    ...  [ 3, 6.4,  9., 1.2]])
-    >>> w_init = np.array([[1, 4], [7, 2]])
-    >>> K, W, S = fastica(X, n_comp=2, algorithm='parallel', w_init=w_init)
-    >>> print S
-    [[-0.1608589   0.80049427]
-     [ 0.77367782 -0.26093925]
-     [-0.61281893 -0.53955503]]
-
 
     Notes
     -----
@@ -183,9 +169,6 @@ def fastica(X, n_comp=None,
       pp. 411-430
 
     """
-    # XXX: The above doctest is probably very sensitive to numerical
-    # noise.
-    # XXX: The above doctest does not work with deflation approach.
     algorithm_funcs = {'parallel': _ica_par,
                        'deflation': _ica_def}
 
