@@ -20,12 +20,17 @@ from .tools.parallel import Parallel, delayed
 # Utilities to compare maps 
 ################################################################################
 
-def find_permutation(X, Y):
+def find_permutation(X, Y, threshold=None):
     """ Returns the permutation indices of Y that maximise the correlation
         between the vectors of Y and the vectors of X.
     """
     x_list = list()
     y_list = list()
+    if threshold is not None:
+        X = X.copy()
+        Y = Y.copy()
+        X[np.abs(X) < threshold] = 0
+        Y[np.abs(Y) < threshold] = 0
     K = np.dot(X.T, Y)
     permutation = np.zeros((K.shape[0],), int)
     
