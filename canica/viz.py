@@ -12,25 +12,25 @@ import matplotlib as mp
 # Neuroimaging library imports
 import nifti
 
-from fff2.viz import activation_maps as am
+from nipy.neurospin.viz import activation_maps as am
 
-# Create an MPL colormap to suit my needs:
-cdict = {'blue': ((0., 1.0, 1.0), 
-                    (0.1825, 1.0, 1.0), 
-                    (0.5, 0.2, 0.0), 
-                    (0.873, 0.0, 0.0), 
-                    (1.0, 1.0, 1.0)),
-        'green': ((0.0, 1.0, 1.0),
-                    (0.1825, 0.5, 0.5),
-                    (0.5, 0.1, 0.0),
-                    (0.6825, 0.0, 0.0),
-                    (1.0, 1.0, 1.0)),
-        'red'  : ((0.0, 1.0, 1.0),
-                    (0.3873, .0, .0),
-                    (0.5, 0., 0.15),
-                    (0.6825, 1.0, 1.0),
-                    (1.0, 1.0, 1.0))
-        }
+################################################################################
+# Create a MPL colormap to suit our needs:
+# FIXME: This is no longer needed, activation_maps has this
+import pylab as pl
+cdict1 = pl.cm.hot._segmentdata.copy()
+
+cdict = dict()
+cdict['green'] = [(0.5*(1-p), c1, c2)
+                        for (p, c1, c2) in reversed(cdict1['green'])]
+cdict['blue'] = [(0.5*(1-p), c1, c2)
+                        for (p, c1, c2) in reversed(cdict1['red'])]
+cdict['red'] = [(0.5*(1-p), c1, c2)
+                        for (p, c1, c2) in reversed(cdict1['blue'])]
+
+for color in ('red', 'green', 'blue'):
+    cdict[color].extend([(0.5*(1+p), c1, c2) 
+                                for (p, c1, c2) in cdict1[color]])
 
 cmap = mp.colors.LinearSegmentedColormap('my_colormap', cdict, 512)
 
