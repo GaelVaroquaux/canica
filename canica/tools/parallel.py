@@ -30,6 +30,12 @@ def delayed(function):
 class Parallel(object):
     """ Helper class for readable parallel mapping.
 
+        Parameters
+        -----------
+        n_jobs: int
+            The number of jobs to use for the computation. If -1 all CPUs
+            are used.
+
         Example
         --------
 
