@@ -223,10 +223,7 @@ def fastica(X, n_comp=None,
         # Whitening and preprocessing by PCA
         u, d, _ = np.linalg.svd(X, full_matrices=False)
         del _
-        # XXX: Maybe we could provide a mean to estimate n_comp if it has not 
-        # been provided ??? So that we do not have to perform another PCA 
-        # before calling fastica ???
-        K = (u/d)[:n_comp]  # see (6.33) p.140
+        K = (u/d).T[:n_comp]  # see (6.33) p.140
         del u, d
         X1 = np.dot(K, X) # see (13.6) p.267 Here X1 is white and data 
         # in X has been projected onto a subspace by PCA
