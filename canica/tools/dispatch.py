@@ -1,6 +1,5 @@
 """ Generators used to dispatch cross-validations.
 """
-import itertools
 
 def dispatch(n, n_packs):
     """ A generator to dispatch n into n_packs.

@@ -7,32 +7,10 @@ from os.path import join as pjoin
 # Major scientific library imports
 import numpy as np
 import pylab as pl
-import matplotlib as mp
 
 # Neuroimaging library imports
-import nifti
-
+from nipy.io.imageformats import save, Nifti1Image, Nifti1Header
 from nipy.neurospin.viz import activation_maps as am
-
-################################################################################
-# Create a MPL colormap to suit our needs:
-# FIXME: This is no longer needed, activation_maps has this
-import pylab as pl
-cdict1 = pl.cm.hot._segmentdata.copy()
-
-cdict = dict()
-cdict['green'] = [(0.5*(1-p), c1, c2)
-                        for (p, c1, c2) in reversed(cdict1['green'])]
-cdict['blue'] = [(0.5*(1-p), c1, c2)
-                        for (p, c1, c2) in reversed(cdict1['red'])]
-cdict['red'] = [(0.5*(1-p), c1, c2)
-                        for (p, c1, c2) in reversed(cdict1['blue'])]
-
-for color in ('red', 'green', 'blue'):
-    cdict[color].extend([(0.5*(1+p), c1, c2) 
-                                for (p, c1, c2) in cdict1[color]])
-
-cmap = mp.colors.LinearSegmentedColormap('my_colormap', cdict, 512)
 
 
 def auto_sign(map, threshold=0):
@@ -44,12 +22,41 @@ def auto_sign(map, threshold=0):
 
 
 def save_ics(icas, mask, threshold, output_dir, header, titles=None,
-                format='png'):
+                format='png', cmap=am.cm.cold_hot,
+                **kwargs):
+    """ Save the independant compnents to Nifti and to images.
+
+        Parameters
+        -----------
+        icas: 2D ndarray
+            The independant components, as returned by CanICA.
+        mask: 3D ndarray
+            The 3D boolean array used to go from index to voxel space for
+            each IC.
+        threshold: float
+            The threshold value used to threshold the ICs
+        output_dir: string
+            The directory in which maps and nifti files will be saved.
+        header: dictionnary or Nifti1Header object
+            The header for the nifti file, as returned by pynifti's
+            header attribute, or
+            nipy.io.imageformats.load().get_header().
+        titles: None or list of strings.
+            Titles to be used for each ICs
+        cmap: matplotlib colormap
+            The colormap to be used for the independant compnents, for 
+            example pylab.cm.hot
+    """
     # put in order n_ic, n_voxels
     icas = icas.T
 
-    header['intent_name'] = 'IC'
-    sform = header['sform']
+    if isinstance(header, Nifti1Header):
+        sform = header.get_best_affine()
+    else:
+        sform = header['sform']
+        # XXX: I don't know how to convert a dictionnary to a
+        # Nifti1Header.
+        header = None
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -61,14 +68,14 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
         # Modify the 3D map rather than the IC to avoid modifying
         # the original data.
         map3d *= auto_sign(ic, threshold=threshold)
-        nifti.NiftiImage(map3d.T, header).save(
-                                pjoin(output_dir, 'ic_no_thr%02i.nii' % index)
-                            )
+        save(Nifti1Image(map3d, sform, header=header),
+                          pjoin(output_dir, 'ic_no_thr%02i.nii' % index)
+                        )
         
         map3d[np.abs(map3d) < threshold] = 0
-        nifti.NiftiImage(map3d.T, header).save(
-                                pjoin(output_dir, 'ic%02i.nii' % index)
-                            )
+        save(Nifti1Image(map3d, sform, header=header),
+                            pjoin(output_dir, 'ic%02i.nii' % index)
+                        )
         x, y, z = am.find_cut_coords(map3d, mask=mask,
                                         activation_threshold=1e-10)
         # XXX: This is all wrong: we are struggling, jumping from voxel to
@@ -83,7 +90,9 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
             else:
                 title = ''
             am.plot_map_2d(map3d, sform, (x, y, z), figure_num=512,
-                                                    title=title, cmap=cmap)
+                                                    title=title,
+                                                    cmap=cmap,
+                                                    **kwargs)
         else:
             pl.clf()
         pl.savefig(pjoin(output_dir, 'map_%02i.%s' % (index, format)))
