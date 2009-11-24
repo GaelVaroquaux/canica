@@ -22,7 +22,7 @@ def auto_sign(map, threshold=0):
 
 
 def save_ics(icas, mask, threshold, output_dir, header, titles=None,
-                format='png', cmap=am.cm.cold_hot,
+                format=None, cmap=am.cm.cold_hot,
                 **kwargs):
     """ Save the independant compnents to Nifti and to images.
 
@@ -43,6 +43,8 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
             nipy.io.imageformats.load().get_header().
         titles: None or list of strings.
             Titles to be used for each ICs
+	format: {None, 'png', 'pdf', 'svg', 'jpg', ...}
+	    The format used to save a preview. If None, no preview is saved.
         cmap: matplotlib colormap
             The colormap to be used for the independant compnents, for 
             example pylab.cm.hot
@@ -76,6 +78,8 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
         save(Nifti1Image(map3d, sform, header=header),
                             pjoin(output_dir, 'ic%02i.nii' % index)
                         )
+	if format is None:
+	    continue
         x, y, z = am.find_cut_coords(map3d, mask=mask,
                                         activation_threshold=1e-10)
         # XXX: This is all wrong: we are struggling, jumping from voxel to

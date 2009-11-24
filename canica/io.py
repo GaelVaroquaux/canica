@@ -29,17 +29,29 @@ def series_from_mask(session_files, mask):
             3D array of time course: (session, voxel, time)
     """
     mask = mask.astype(np.bool)
+    nb_time_points = len(session_files[0])
+    if len(session_files[0]) == 1:
+	# We have a 4D nifti file
+	nb_time_points = load(session_files[0][0]).get_data().shape[-1]
     session_series = np.zeros((len(session_files), mask.sum(), 
-                                            len(session_files[0])),
+                                            nb_time_points),
                                     np.float32)
+
     for session_index, filenames in enumerate(session_files):
-        for file_index, filename in enumerate(filenames):
-            data = load(filename).get_data()
-                
-            session_series[session_index, :, file_index] = \
-                            data[mask].astype(np.float32)
-            # Free memory early
-            del data
+        if len(filenames) == 1:
+	    # We have a 4D nifti file
+	    data = load(filenames[0]).get_data()
+	    session_series[session_index, :, :] = data[mask]
+	    # Free memory early
+	    del data
+        else:
+            for file_index, filename in enumerate(filenames):
+                data = load(filename).get_data()
+                    
+                session_series[session_index, :, file_index] = \
+                                data[mask].astype(np.float32)
+                # Free memory early
+                del data
 
     return session_series.squeeze()
 
