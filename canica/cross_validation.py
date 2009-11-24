@@ -17,7 +17,7 @@ from .canica import canica
 from .tools.parallel import Parallel, delayed
 
 ################################################################################
-# Utilities to compare maps 
+# Utilities to compare maps
 ################################################################################
 
 def find_permutation(X, Y, threshold=None):
@@ -33,7 +33,7 @@ def find_permutation(X, Y, threshold=None):
         Y[np.abs(Y) < threshold] = 0
     K = np.dot(X.T, Y)
     permutation = np.zeros((K.shape[0],), int)
-    
+
     for target_index in np.argsort(-np.abs(K).flatten()):
         x, y = np.unravel_index(target_index, K.shape)
         if not x in x_list and not y in y_list:
@@ -42,7 +42,7 @@ def find_permutation(X, Y, threshold=None):
             permutation[x] = y
         if len(x_list) == permutation.shape[0]:
             break
-    
+
     return permutation
 
 
@@ -139,16 +139,16 @@ def canica_pair(file_pair, n_pca_components, mask, threshold,
                            + np.dot(reference_icas.T, ica2).max(axis=1))
 
     return un_thr_stats, thr_stats, reproducibility
-    
+
 
 
 def canica_split_half(filenames, n_pca_components, n_split_half=50,
-                        ccs_threshold=None, n_ica_components=None, 
+                        ccs_threshold=None, n_ica_components=None,
                         do_cca=True, mask=None,
                         threshold_p_value=5e-3,
                         n_jobs=1, working_dir=None):
     # First do a full CanICA run, to have references and common mask:
-    reference_icas, mask, threshold = canica(filenames, 
+    reference_icas, mask, threshold = canica(filenames,
                                     n_pca_components=n_pca_components,
                                     n_ica_components=n_ica_components,
                                     ccs_threshold=ccs_threshold,
@@ -171,14 +171,14 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
     memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
     correl = Parallel(n_jobs=n_jobs)(
                     delayed(memory.cache(canica_pair))(
-                                            file_pair, n_pca_components, 
+                                            file_pair, n_pca_components,
                                             mask, threshold,
                                             reference_icas,
                                             n_ica_components=n_ica_components,
                                             ccs_threshold=ccs_threshold,
                                             do_cca=do_cca,
                                             working_dir=working_dir,
-                                            n_jobs=1, 
+                                            n_jobs=1,
                                     )
                     for file_pair in pairs)
 

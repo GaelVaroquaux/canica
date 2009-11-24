@@ -10,7 +10,7 @@ import nipy.neurospin.utils.mask as mask_utils
 from nipy.io.imageformats import load
 
 ################################################################################
-# Series and mask extraction 
+# Series and mask extraction
 ################################################################################
 
 def series_from_mask(session_files, mask):
@@ -18,7 +18,7 @@ def series_from_mask(session_files, mask):
 
         Parameters
         -----------
-        session_files: list of list of nifti file names. 
+        session_files: list of list of nifti file names.
             Files are grouped by session.
         mask: 3d ndarray
             3D mask array: true where a voxel should be used.

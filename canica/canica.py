@@ -52,13 +52,13 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
     memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
     cache = memory.cache
 
-    # extract the common mask. 
+    # extract the common mask.
     if mask is None:
         mask = cache(mask_utils.compute_mask_sessions)(session_files)
 
     # Spread the load on multiple CPUs
     pca = delayed(cache(session_pca))
-    session_pcas = Parallel(n_jobs=n_jobs)( 
+    session_pcas = Parallel(n_jobs=n_jobs)(
                                     pca(filenames, mask)
                                     for filenames in session_files)
     pcas, pca_loadings = zip(*session_pcas)
@@ -71,7 +71,7 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
 
 def ica_step(group_maps, group_variance, working_dir=None):
     memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
-    # We do a spatial ICA: the arrays are transposed in the following, 
+    # We do a spatial ICA: the arrays are transposed in the following,
     # axis1 = component, and axis2 is voxel number.
     _, ica_maps = memory.cache(fastica)(group_maps.T, whiten=False)
 
@@ -87,7 +87,7 @@ def ica_step(group_maps, group_variance, working_dir=None):
     return ica_maps.T
 
 
-def extract_group_components(subject_components, variances, 
+def extract_group_components(subject_components, variances,
                 ccs_threshold=None, n_group_components=None, do_cca=True,
                 working_dir=None):
     # Use asarray to cast to a non memmapped array
@@ -100,12 +100,12 @@ def extract_group_components(subject_components, variances,
 
     # The group components (concatenated subject components)
     group_components = subject_components.T
-    group_components = np.reshape(group_components, 
+    group_components = np.reshape(group_components,
                                     (group_components.shape[0], -1))
     # Save memory
     del subject_components
 
-    # Inter-subject CCA 
+    # Inter-subject CCA
     memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
     svd = memory.cache(np.linalg.svd)
     cca_maps, ccs, _ = svd(group_components, full_matrices=False)
@@ -151,26 +151,26 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
 
         Notes
         -----
-        Either n_ica_components of ccs_threshold should be specified, to 
+        Either n_ica_components of ccs_threshold should be specified, to
         indicate the final number of components.
     """
     if n_ica_components is None and ccs_threshold is None:
         raise ValueError('You need to specify either a number of '
             'ICA components, or a threshold for the canonical correlations')
-    
-    pcas, mask, variances = extract_subject_components(filenames, 
-                                                       n_jobs=n_jobs, 
+
+    pcas, mask, variances = extract_subject_components(filenames,
+                                                       n_jobs=n_jobs,
                                                        mask=mask,
                                                        working_dir=working_dir)
 
     # Use np.asarray to get rid of memmapped arrays
     pcas = [np.asarray(pca[:, :n_pca_components].T) for pca in pcas]
-    variances = [np.asarray(variance[:n_pca_components]) 
+    variances = [np.asarray(variance[:n_pca_components])
                                             for variance in variances]
 
-    group_components, group_variance = extract_group_components(pcas, 
-                                        variances, ccs_threshold=ccs_threshold, 
-                                        n_group_components=n_ica_components, 
+    group_components, group_variance = extract_group_components(pcas,
+                                        variances, ccs_threshold=ccs_threshold,
+                                        n_group_components=n_ica_components,
                                         do_cca=do_cca, working_dir=working_dir)
 
     ica_maps = ica_step(group_components, group_variance,
@@ -180,5 +180,4 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
                                 /np.sqrt(ica_maps.shape[0]))
 
     return ica_maps, mask, threshold
-
 
