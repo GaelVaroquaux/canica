@@ -81,7 +81,7 @@ def merge_stats(result_dicts):
 
     return out_dict
 
-def report_stats(stat_dict, working_dir=None):
+def report_stats(stat_dict):
     """ Save a report of the cross-correlation statistics.
     """
     d = stat_dict
