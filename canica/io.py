@@ -6,7 +6,6 @@ Functions to read series and masks on the raw data.
 import numpy as np
 
 # Neuroimaging library imports
-import nipy.neurospin.utils.mask as mask_utils
 from nipy.io.imageformats import load
 
 ################################################################################
@@ -29,6 +28,7 @@ def series_from_mask(session_files, mask, dtype=np.float32):
             3D array of time course: (session, voxel, time)
     """
     mask = mask.astype(np.bool)
+    # XXX: What if the per session lengths are different!
     session_series = np.zeros((len(session_files), mask.sum(), 
                                             len(session_files[0])),
                                 dtype=dtype)

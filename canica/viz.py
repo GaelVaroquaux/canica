@@ -78,8 +78,8 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
         save(Nifti1Image(map3d, sform, header=header),
                             pjoin(output_dir, 'ic%02i.nii' % index)
                         )
-	if format is None:
-	    continue
+        if format is None:
+            continue
         x, y, z = am.find_cut_coords(map3d, mask=mask,
                                         activation_threshold=1e-10)
         # XXX: This is all wrong: we are struggling, jumping from voxel to

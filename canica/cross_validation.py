@@ -153,6 +153,7 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
                                     n_ica_components=n_ica_components,
                                     ccs_threshold=ccs_threshold,
                                     do_cca=do_cca,
+                                    mask=mask,
                                     working_dir=working_dir,
                                     n_jobs=n_jobs)
 

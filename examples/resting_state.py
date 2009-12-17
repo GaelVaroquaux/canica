@@ -41,12 +41,12 @@ fmri_header = load(session_files[0][0]).get_header()
 # Run CanICA with a split-half cross-validation study
 icas, mask, threshold, un_thr_stats, thr_stats, reproducibility = \
                 canica_split_half(session_files, 
-                                n_split_half=20,
-                                n_pca_components=N_PCA_COMPONENTS,
-                                n_ica_components=N_ICA_COMPONENTS,
-                                threshold_p_value=THRESHOLD_P_VALUE,
-                                working_dir=WORKING_DIR,
-                                n_jobs=N_JOBS)
+                                  n_split_half=20,
+                                  n_pca_components=N_PCA_COMPONENTS,
+                                  n_ica_components=N_ICA_COMPONENTS,
+                                  threshold_p_value=THRESHOLD_P_VALUE,
+                                  working_dir=WORKING_DIR,
+                                  n_jobs=N_JOBS)
 
 
 # And now output nifti and pretty pictures
