@@ -166,7 +166,10 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
     prng = random.Random(1)
     for _ in range(n_split_half):
         prng.shuffle(these_files)
-        pairs.append((these_files[:n_group1], these_files[n_group1:]))
+        # We sort the groups so as to have more reproducibility:
+        # Memory will not recognise non-sorted files.
+        pairs.append((sorted(these_files[:n_group1]), 
+                      sorted(these_files[n_group1:])))
 
     # Calculation correlation and reproducibility for each pair
     memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')

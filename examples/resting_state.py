@@ -22,7 +22,7 @@ THRESHOLD_P_VALUE = 20e-2
 N_ICA_COMPONENTS = 42
 INPUT_GLOB = '/volatile/varoquau/data/data/subject%(subject)i/functional/fMRI/session1/swf*.img'
 WORKING_DIR = '/tmp/data/canica/'
-
+WORKING_DIR = '~/data-nonsync/canica/sepideh-cube'
 
 #-------------------------------------------------------------------------
 # Disk IO

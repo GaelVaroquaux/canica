@@ -74,8 +74,6 @@ def ica_step(group_maps, group_variance, working_dir=None):
     # We do a spatial ICA: the arrays are transposed in the following,
     # axis1 = component, and axis2 is voxel number.
 
-    # XXX: Should use the cube non-linearity, to maximize sparsity of 
-    # ICs.
     _, ica_maps = memory.cache(fastica)(group_maps.T, whiten=False)
 
     # Project the ICAs on the group maps to give a 'cross-subject
