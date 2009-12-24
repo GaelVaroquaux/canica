@@ -11,6 +11,7 @@ import pylab as pl
 # Neuroimaging library imports
 from nipy.io.imageformats import save, Nifti1Image, Nifti1Header
 from nipy.neurospin.viz import activation_maps as am
+from nipy.neurospin.datasets import VolumeImg
 
 
 def auto_sign(map, threshold=0):
@@ -22,7 +23,7 @@ def auto_sign(map, threshold=0):
 
 
 def save_ics(icas, mask, threshold, output_dir, header, titles=None,
-                format=None, cmap=am.cm.cold_hot,
+                format=None, cmap=am.cm.cold_hot, mean_img=None,
                 **kwargs):
     """ Save the independant compnents to Nifti and to images.
 
@@ -51,6 +52,7 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
     """
     # put in order n_ic, n_voxels
     icas = icas.T
+    mask = mask.astype(np.bool)
 
     if isinstance(header, Nifti1Header):
         sform = header.get_best_affine()
@@ -63,6 +65,15 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
+    if mean_img is not None:
+        anat = np.zeros(mask.shape)
+        anat[mask] = mean_img
+        anat = np.ma.masked_array(anat, np.logical_not(mask))
+        img = VolumeImg(anat, affine=sform, world_space='mine')
+        img = img.xyz_ordered()
+        kwargs['anat'] = img.get_data()
+        kwargs['anat_sform'] = img.affine
+        
     for index, ic in enumerate(icas):
         print 'Outputing map %i out of %i' % (index + 1, len(icas)) 
         map3d = np.zeros(mask.shape)
@@ -80,11 +91,20 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
                         )
         if format is None:
             continue
-        x, y, z = am.find_cut_coords(map3d, mask=mask,
+        img = VolumeImg(map3d, affine=sform, world_space='mine')
+        img = img.xyz_ordered()
+        map3d = img.get_data()
+        this_sform = img.affine
+        img = VolumeImg(mask, affine=sform, world_space='mine',
+                              interpolation='nearest')
+        img = img.xyz_ordered()
+        mask_xyz = img.get_data()
+
+        x, y, z = am.find_cut_coords(map3d, mask=mask_xyz,
                                         activation_threshold=1e-10)
         # XXX: This is all wrong: we are struggling, jumping from voxel to
         # Talairach.
-        y, x, z = am.coord_transform(x, y, z, sform)
+        y, x, z = am.coord_transform(x, y, z, this_sform)
         if np.any(map3d != 0):
             # Ugly trick to force the colormap to be symetric:
             map3d[0, 0, 0] = -map3d.max()
@@ -93,7 +113,7 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
                 title = titles[index]
             else:
                 title = ''
-            am.plot_map_2d(map3d, sform, (x, y, z), figure_num=512,
+            am.plot_map_2d(map3d, this_sform, (x, y, z), figure_num=512,
                                                     title=title,
                                                     cmap=cmap,
                                                     **kwargs)

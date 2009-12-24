@@ -4,6 +4,7 @@ CanICA: Estimation of reproducible group-level ICA patterns for fMRI
 ======================================================================
 
 """
+from operator import add
 
 # Major scientific libraries import
 import numpy as np
@@ -125,7 +126,7 @@ def extract_group_components(subject_components, variances,
 def canica(filenames, n_pca_components, ccs_threshold=None,
                 n_ica_components=None, do_cca=True, mask=None,
                 threshold_p_value=5e-3,
-                n_jobs=1, working_dir=None):
+                n_jobs=1, working_dir=None, return_mean=False):
     """ CanICA
 
         Parameters
@@ -180,5 +181,8 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     threshold = (stats.norm.isf(0.5*threshold_p_value)
                                 /np.sqrt(ica_maps.shape[0]))
 
-    return ica_maps, mask, threshold
+    if not return_mean:
+        return ica_maps, mask, threshold
+    else:
+        return ica_maps, mask, threshold, group_components.T[0]
 
