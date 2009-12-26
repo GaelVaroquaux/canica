@@ -72,7 +72,7 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
         img = VolumeImg(anat, affine=sform, world_space='mine')
         img = img.xyz_ordered()
         kwargs['anat'] = img.get_data()
-        kwargs['anat_sform'] = img.affine
+        kwargs['anat_affine'] = img.affine
         
     for index, ic in enumerate(icas):
         print 'Outputing map %i out of %i' % (index + 1, len(icas)) 
@@ -94,7 +94,7 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
         img = VolumeImg(map3d, affine=sform, world_space='mine')
         img = img.xyz_ordered()
         map3d = img.get_data()
-        this_sform = img.affine
+        this_affine = img.affine
         img = VolumeImg(mask, affine=sform, world_space='mine',
                               interpolation='nearest')
         img = img.xyz_ordered()
@@ -102,23 +102,22 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
 
         x, y, z = am.find_cut_coords(map3d, mask=mask_xyz,
                                         activation_threshold=1e-10)
-        # XXX: This is all wrong: we are struggling, jumping from voxel to
-        # Talairach.
-        y, x, z = am.coord_transform(x, y, z, this_sform)
+        x, y, z = am.coord_transform(x, y, z, this_affine)
+        pl.clf()
         if np.any(map3d != 0):
-            # Ugly trick to force the colormap to be symetric:
-            map3d[0, 0, 0] = -map3d.max()
+            # Force the colormap to be symetric:
+            map_max = max(-map3d.min(), map3d.max())
+            kwargs['vmin'] = -map_max
+            kwargs['vmax'] =  map_max
             map3d = np.ma.masked_equal(map3d, 0, copy=False)
             if titles is not None:
                 title = titles[index]
             else:
-                title = ''
-            am.plot_map_2d(map3d, this_sform, (x, y, z), figure_num=512,
+                title = None
+            am.plot_map_2d(map3d, this_affine, (x, y, z), figure_num=512,
                                                     title=title,
                                                     cmap=cmap,
                                                     **kwargs)
-        else:
-            pl.clf()
         pl.savefig(pjoin(output_dir, 'map_%02i.%s' % (index, format)))
 
 
