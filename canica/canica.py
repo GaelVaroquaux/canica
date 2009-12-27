@@ -4,14 +4,13 @@ CanICA: Estimation of reproducible group-level ICA patterns for fMRI
 ======================================================================
 
 """
-from operator import add
-
 # Major scientific libraries import
 import numpy as np
 from scipy import stats
 
 # Neuroimaging libraries import
 import nipy.neurospin.utils.mask as mask_utils
+from nipy.io.imageformats import load
 
 # Unusual libraries import
 from joblib import Memory
@@ -31,7 +30,7 @@ def session_pca(raw_filenames, mask):
     """
     # Data preprocessing and loading.
     # XXX: series_from_mask should go in nipy.neurospin.utils.mask
-    series = series_from_mask([raw_filenames, ], mask)
+    series, header = series_from_mask([raw_filenames, ], mask)
 
     # XXX: this should go in series_from_mask
     series -= series.mean(axis=-1)[:, np.newaxis]
@@ -42,7 +41,7 @@ def session_pca(raw_filenames, mask):
     # PCA
     components, loadings, _ = np.linalg.svd(series, full_matrices=False)
 
-    return components, loadings
+    return components, loadings, header
 
 
 def extract_subject_components(session_files, mask=None, n_jobs=1,
@@ -56,15 +55,18 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
     # extract the common mask.
     if mask is None:
         mask = cache(mask_utils.compute_mask_sessions)(session_files)
+    elif isinstance(mask, basestring):
+        mask = load(mask).get_data().astype(np.bool)
+ 
 
     # Spread the load on multiple CPUs
     pca = delayed(cache(session_pca))
     session_pcas = Parallel(n_jobs=n_jobs)(
                                     pca(filenames, mask)
                                     for filenames in session_files)
-    pcas, pca_loadings = zip(*session_pcas)
+    pcas, pca_loadings, headers = zip(*session_pcas)
 
-    return pcas, mask, pca_loadings
+    return pcas, mask, pca_loadings, headers[0]
 
 
 ################################################################################
@@ -127,10 +129,17 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
                 n_ica_components=None, do_cca=True, mask=None,
                 threshold_p_value=5e-3,
                 n_jobs=1, working_dir=None, return_mean=False):
-    """ CanICA
+    """ CanICA: reproducible multi-session ICA components from fMRI
+        datasets.
 
         Parameters
         ----------
+        filenames: list of list of strings.
+            A list of list of filenames. The inner list gives the
+            filenames of the datasets (nifti or analyze files) for one
+            session, and the outer list is the list of the various
+            sessions. See the super_glob to establish easily such a
+            list.
         n_pca_components: int
             Number of principal components to use at the subject level.
         ccs_threshold: float, optional
@@ -141,8 +150,10 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
         do_cca: boolean, optional
             If True, a canonical correlations analysis (CCA) is used to
             go from the subject patterns to the group model.
-        mask: 3D boolean ndarray, optional
+        mask: 3D boolean ndarray or string, optional
             The mask to use to extract the interesting time series.
+            Can be either the array of the mask, or the name of a file
+            containing the mask.
         threshold_p_value, float, optional
             The P value to use while thresholding the final ICA maps.
         n_jobs: int, optional
@@ -160,7 +171,7 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
         raise ValueError('You need to specify either a number of '
             'ICA components, or a threshold for the canonical correlations')
 
-    pcas, mask, variances = extract_subject_components(filenames,
+    pcas, mask, variances, header = extract_subject_components(filenames,
                                                        n_jobs=n_jobs,
                                                        mask=mask,
                                                        working_dir=working_dir)
@@ -182,7 +193,7 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
                                 /np.sqrt(ica_maps.shape[0]))
 
     if not return_mean:
-        return ica_maps, mask, threshold
+        return ica_maps, mask, threshold, header
     else:
-        return ica_maps, mask, threshold, group_components.T[0]
+        return ica_maps, mask, threshold, header, group_components.T[0]
 

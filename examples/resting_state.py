@@ -4,10 +4,6 @@ Apply CanICA on sample data
 # Author: Gael Varoquaux <gael.varoquaux@normalesup.org> 
 # License: BSD Style.
 
-
-# Major neuroimaging libraries imports
-from nipy.io.imageformats import load
-
 # Local imports
 from canica import super_glob, save_ics
 from canica.cross_validation import canica_split_half
@@ -30,16 +26,12 @@ WORKING_DIR = '~/data-nonsync/canica/sepideh-cube'
 # The super_glob returns a list of globs for each value of subject
 session_files = super_glob(INPUT_GLOB, subject=SUBJECTS)
 
-# Retrieve the header of the original data, to be able to save with
-# the same information
-fmri_header = load(session_files[0][0]).get_header()
-
 #-------------------------------------------------------------------------
 # CanICA estimation
 #-------------------------------------------------------------------------
 
 # Run CanICA with a split-half cross-validation study
-icas, mask, threshold, un_thr_stats, thr_stats, reproducibility = \
+icas, mask, threshold, un_thr_stats, thr_stats, header, reproducibility = \
                 canica_split_half(session_files, 
                                   n_split_half=20,
                                   n_pca_components=N_PCA_COMPONENTS,
@@ -52,7 +44,7 @@ icas, mask, threshold, un_thr_stats, thr_stats, reproducibility = \
 # And now output nifti and pretty pictures
 titles = ['map % 2i, reproducibility: %.2f' % (index, r) 
                 for  index, r in enumerate(reproducibility)]
-save_ics(icas, mask, threshold, WORKING_DIR, fmri_header,
+save_ics(icas, mask, threshold, WORKING_DIR, header,
                 titles=titles, format='pdf')
 
 

@@ -120,8 +120,8 @@ def canica_pair(file_pair, n_pca_components, mask, threshold,
 
     # Separate the maps from the mask and threshold in the canica
     # result.
-    ica1, _, _ = ica1
-    ica2, _, _ = ica2
+    ica1, _, _, _ = ica1
+    ica2, _, _, _ = ica2
 
     un_thr_stats = correlation_stats(ica1, ica2)
 
@@ -147,8 +147,48 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
                         do_cca=True, mask=None,
                         threshold_p_value=5e-3,
                         n_jobs=1, working_dir=None):
+    """ CanICA with reproducibility test via split-half cross validation.
+
+        Parameters
+        ----------
+        filenames: list of list of strings.
+            A list of list of filenames. The inner list gives the
+            filenames of the datasets (nifti or analyze files) for one
+            session, and the outer list is the list of the various
+            sessions. See the super_glob to establish easily such a
+            list.
+        n_pca_components: int
+            Number of principal components to use at the subject level.
+        n_split_half: int, optional
+            Number of split-half test to perform.
+        ccs_threshold: float, optional
+            Threshold of the variance retained in the second level
+            analysis.
+        n_ica_components: float, optional
+            Number of ICA to retain.
+        do_cca: boolean, optional
+            If True, a canonical correlations analysis (CCA) is used to
+            go from the subject patterns to the group model.
+        mask: 3D boolean ndarray or string, optional
+            The mask to use to extract the interesting time series.
+            Can be either the array of the mask, or the name of a file
+            containing the mask.
+        threshold_p_value, float, optional
+            The P value to use while thresholding the final ICA maps.
+        n_jobs: int, optional
+            Number of jobs to start on a multi-processor machine.
+            If -1, one job is started per CPU.
+        working_dir: string, optional
+            Optional directory name to use to store temporary cache.
+
+        Notes
+        -----
+        Either n_ica_components of ccs_threshold should be specified, to
+        indicate the final number of components.
+
+    """
     # First do a full CanICA run, to have references and common mask:
-    reference_icas, mask, threshold = canica(filenames,
+    reference_icas, mask, threshold, header = canica(filenames,
                                     n_pca_components=n_pca_components,
                                     n_ica_components=n_ica_components,
                                     ccs_threshold=ccs_threshold,
@@ -215,6 +255,6 @@ Thresholded ICA maps
 """ % (report_stats(un_thr_stats),
        report_stats(thr_stats)))
 
-    return reference_icas, mask, threshold, un_thr_stats, thr_stats, \
+    return reference_icas, mask, threshold, header, un_thr_stats, thr_stats, \
                         reproducibility
 
