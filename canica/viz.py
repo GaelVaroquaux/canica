@@ -114,7 +114,7 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
                 title = titles[index]
             else:
                 title = None
-            am.plot_map_2d(map3d, this_affine, (x, y, z), figure_num=512,
+            am.plot_map_2d(map3d, this_affine, (x, y, z), figure=512,
                                                     title=title,
                                                     cmap=cmap,
                                                     **kwargs)
