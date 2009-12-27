@@ -5,7 +5,7 @@ Apply CanICA on sample data
 # License: BSD Style.
 
 # Local imports
-from canica import super_glob, save_ics
+from canica import super_glob
 from canica.cross_validation import canica_split_half
 
 #-------------------------------------------------------------------------
@@ -18,7 +18,6 @@ THRESHOLD_P_VALUE = 20e-2
 N_ICA_COMPONENTS = 42
 INPUT_GLOB = '/volatile/varoquau/data/data/subject%(subject)i/functional/fMRI/session1/swf*.img'
 WORKING_DIR = '/tmp/data/canica/'
-WORKING_DIR = '~/data-nonsync/canica/sepideh-cube'
 
 #-------------------------------------------------------------------------
 # Disk IO
@@ -38,14 +37,8 @@ icas, mask, threshold, un_thr_stats, thr_stats, header, reproducibility = \
                                   n_ica_components=N_ICA_COMPONENTS,
                                   threshold_p_value=THRESHOLD_P_VALUE,
                                   working_dir=WORKING_DIR,
-                                  n_jobs=N_JOBS)
-
-
-# And now output nifti and pretty pictures
-titles = ['map % 2i, reproducibility: %.2f' % (index, r) 
-                for  index, r in enumerate(reproducibility)]
-save_ics(icas, mask, threshold, WORKING_DIR, header,
-                titles=titles, format='pdf')
+                                  n_jobs=N_JOBS,
+                                  report=True)
 
 
 # EOF ##########################################################################

@@ -4,6 +4,8 @@ CanICA: Estimation of reproducible group-level ICA patterns for fMRI
 ======================================================================
 
 """
+from os.path import join as pjoin
+
 # Major scientific libraries import
 import numpy as np
 from scipy import stats
@@ -19,6 +21,7 @@ from joblib import Memory
 from .tools.parallel import Parallel, delayed
 from .io import series_from_mask
 from .algorithms.fastica import fastica
+from .viz import save_ics, plot_ics
 
 
 ################################################################################
@@ -45,11 +48,11 @@ def session_pca(raw_filenames, mask):
 
 
 def extract_subject_components(session_files, mask=None, n_jobs=1,
-                                              working_dir=None):
+                                              cachedir=None):
     """ Calculate principal components over different subjects.
     """
-    # If working_dir is None, the Memory object is transparent.
-    memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
+    # If cachedir is None, the Memory object is transparent.
+    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
     cache = memory.cache
 
     # extract the common mask.
@@ -72,8 +75,8 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
 ################################################################################
 # Group-level analysis: inter-subject extraction of ICA maps
 
-def ica_step(group_maps, group_variance, working_dir=None):
-    memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
+def ica_step(group_maps, group_variance, cachedir=None):
+    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
     # We do a spatial ICA: the arrays are transposed in the following,
     # axis1 = component, and axis2 is voxel number.
 
@@ -93,7 +96,7 @@ def ica_step(group_maps, group_variance, working_dir=None):
 
 def extract_group_components(subject_components, variances,
                 ccs_threshold=None, n_group_components=None, do_cca=True,
-                working_dir=None):
+                cachedir=None):
     # Use asarray to cast to a non memmapped array
     subject_components = np.asarray(subject_components)
 
@@ -110,7 +113,7 @@ def extract_group_components(subject_components, variances,
     del subject_components
 
     # Inter-subject CCA
-    memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
+    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
     svd = memory.cache(np.linalg.svd)
     cca_maps, ccs, _ = svd(group_components, full_matrices=False)
     # Save memory
@@ -127,8 +130,9 @@ def extract_group_components(subject_components, variances,
 
 def canica(filenames, n_pca_components, ccs_threshold=None,
                 n_ica_components=None, do_cca=True, mask=None,
-                threshold_p_value=5e-3,
-                n_jobs=1, working_dir=None, return_mean=False):
+                threshold_p_value=5e-2,
+                n_jobs=1, working_dir=None, return_mean=False,
+                save_nifti=False, report=False):
     """ CanICA: reproducible multi-session ICA components from fMRI
         datasets.
 
@@ -161,20 +165,33 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
             If -1, one job is started per CPU.
         working_dir: string, optional
             Optional directory name to use to store temporary cache.
-
+        save_nifti: boolean, optional
+            If save_nifti is True, a nifti file of the results is saved
+            in the working_dir.
+        report: boolean, optional
+            If report is True, an html report is saved in the
+            working_dir.
+  
         Notes
         -----
         Either n_ica_components of ccs_threshold should be specified, to
         indicate the final number of components.
+
+        If report or save_nifti is specified, a working_dir should be
+        specified.
     """
     if n_ica_components is None and ccs_threshold is None:
         raise ValueError('You need to specify either a number of '
             'ICA components, or a threshold for the canonical correlations')
 
+    if working_dir is not None:
+        cachedir = pjoin(working_dir, 'cache')
+    else:
+        cachedir = None
     pcas, mask, variances, header = extract_subject_components(filenames,
                                                        n_jobs=n_jobs,
                                                        mask=mask,
-                                                       working_dir=working_dir)
+                                                       cachedir=cachedir)
 
     # Use np.asarray to get rid of memmapped arrays
     pcas = [np.asarray(pca[:, :n_pca_components].T) for pca in pcas]
@@ -184,14 +201,28 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     group_components, group_variance = extract_group_components(pcas,
                                         variances, ccs_threshold=ccs_threshold,
                                         n_group_components=n_ica_components,
-                                        do_cca=do_cca, working_dir=working_dir)
+                                        do_cca=do_cca, cachedir=cachedir)
 
-    ica_maps = ica_step(group_components, group_variance,
-                                          working_dir=working_dir)
+    ica_maps = ica_step(group_components, group_variance, cachedir=cachedir)
 
     threshold = (stats.norm.isf(0.5*threshold_p_value)
                                 /np.sqrt(ica_maps.shape[0]))
 
+    header['cal_max'] = np.nanmax(ica_maps)
+    header['cal_min'] = np.nanmin(ica_maps)
+
+
+    if save_nifti or report:
+        maps3d, affine = save_ics(ica_maps, mask, threshold, 
+                        output_dir=working_dir, header=header)
+    if report:
+        # First create an anat image from the mean.
+        mean_img = np.zeros(maps3d.shape[:-1])
+        mean_img[mask] = group_components.T[0]
+        mean_img = np.ma.masked_array(mean_img, np.logical_not(mask))
+        plot_ics(maps3d, affine, mean_img=mean_img,
+                 titles='map %(index)i',
+                 output_dir=working_dir, report=True, format='png')
     if not return_mean:
         return ica_maps, mask, threshold, header
     else:

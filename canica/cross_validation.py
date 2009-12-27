@@ -4,6 +4,7 @@ Cross validation of ICA group methods.
 import copy
 import random
 import os
+from os.path import join as pjoin
 
 # Major scientific libraries import
 import numpy as np
@@ -146,7 +147,7 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
                         ccs_threshold=None, n_ica_components=None,
                         do_cca=True, mask=None,
                         threshold_p_value=5e-3,
-                        n_jobs=1, working_dir=None):
+                        n_jobs=1, working_dir=None, report=False):
     """ CanICA with reproducibility test via split-half cross validation.
 
         Parameters
@@ -180,7 +181,10 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
             If -1, one job is started per CPU.
         working_dir: string, optional
             Optional directory name to use to store temporary cache.
-
+        report: boolean, optional
+            If report is True, an html report is saved in the
+            working_dir.
+ 
         Notes
         -----
         Either n_ica_components of ccs_threshold should be specified, to
@@ -195,7 +199,11 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
                                     do_cca=do_cca,
                                     mask=mask,
                                     working_dir=working_dir,
-                                    n_jobs=n_jobs)
+                                    n_jobs=n_jobs,
+                                    report=report)
+
+    # FIXME: We should generate our own report, rather than delegating to 
+    # CanICA.
 
     # Generate a list of pairs
     these_files = copy.copy(filenames)
@@ -212,7 +220,11 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
                       sorted(these_files[n_group1:])))
 
     # Calculation correlation and reproducibility for each pair
-    memory = Memory(cachedir=working_dir, debug=True, mmap_mode='r')
+    if working_dir is not None:
+        cachedir = pjoin(working_dir, 'cache')
+    else:
+        cachedir = None
+    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
     correl = Parallel(n_jobs=n_jobs)(
                     delayed(memory.cache(canica_pair))(
                                             file_pair, n_pca_components,

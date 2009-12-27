@@ -3,6 +3,7 @@ Visualization functions for CanICA.
 """
 import os
 from os.path import join as pjoin
+import time
 
 # Major scientific library imports
 import numpy as np
@@ -13,6 +14,7 @@ from nipy.io.imageformats import save, Nifti1Image, Nifti1Header
 from nipy.neurospin.viz import activation_maps as am
 from nipy.neurospin.datasets import VolumeImg
 
+from .tools import markup
 
 def auto_sign(map, threshold=0):
     positiv_mass = (map > threshold).sum()
@@ -22,11 +24,8 @@ def auto_sign(map, threshold=0):
     return 1
 
 
-def save_ics(icas, mask, threshold, output_dir, header, 
-                titles='map %(index)i',
-                format=None, cmap=am.cm.cold_hot, mean_img=None,
-                **kwargs):
-    """ Save the independant compnents to Nifti and to images.
+def save_ics(icas, mask, threshold, output_dir, header):
+    """ Save the independant compnents to Nifti.
 
         Parameters
         -----------
@@ -43,22 +42,15 @@ def save_ics(icas, mask, threshold, output_dir, header,
             The header for the nifti file, as returned by pynifti's
             header attribute, or
             nipy.io.imageformats.load().get_header().
-        titles: None or list of strings.
-            Titles to be used for each ICs
-	format: {None, 'png', 'pdf', 'svg', 'jpg', ...}
-	    The format used to save a preview. If None, no preview is saved.
-        cmap: matplotlib colormap
-            The colormap to be used for the independant compnents, for 
-            example pylab.cm.hot
     """
     # put in order n_ic, n_voxels
     icas = icas.T
     mask = mask.astype(np.bool)
 
     if isinstance(header, Nifti1Header):
-        sform = header.get_best_affine()
+        affine = header.get_best_affine()
     else:
-        sform = header['sform']
+        affine = header['sform']
         # XXX: I don't know how to convert a dictionnary to a
         # Nifti1Header.
         header = None
@@ -66,45 +58,61 @@ def save_ics(icas, mask, threshold, output_dir, header,
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
+    icas = icas.copy()
+    for ic in icas:
+        ic *= auto_sign(ic, threshold=threshold)
+
+    maps3d = np.zeros(list(mask.shape) + [len(icas)])
+
+    maps3d[mask] = icas.T
+    save(Nifti1Image(maps3d, affine, header=header),
+                          pjoin(output_dir, 'icas_no_thr.nii')
+                        )
+    maps3d[np.abs(maps3d) < threshold] = 0
+    save(Nifti1Image(maps3d, affine, header=header),
+                          pjoin(output_dir, 'icas.nii')
+                        )
+    return maps3d, affine
+
+
+def plot_ics(maps3d, affine, output_dir, titles=None, 
+            format='png', cmap=am.cm.cold_hot, mean_img=None,
+            report=True, **kwargs):
+    """ Save the ics to image file, and to a report.
+
+        Parameters
+        ----------
+        titles: None, string or list of strings.
+            Titles to be used for each ICs
+        format: {'png', 'pdf', 'svg', 'jpg', ...}
+            The format used to save a preview.
+        cmap: matplotlib colormap
+            The colormap to be used for the independant compnents, for 
+            example pylab.cm.hot
+        report: boolean, optional
+            If report is True, an html report is saved.
+        kwargs:
+            Extra keyword arguments are passed to plot_map_2d.
+    """
     if mean_img is not None:
-        anat = np.zeros(mask.shape)
-        anat[mask] = mean_img
-        anat = np.ma.masked_array(anat, np.logical_not(mask))
-        img = VolumeImg(anat, affine=sform, world_space='mine')
+        img = VolumeImg(mean_img, affine=affine, world_space='mine')
         img = img.xyz_ordered()
         kwargs['anat'] = img.get_data()
         kwargs['anat_affine'] = img.affine
-        
-    for index, ic in enumerate(icas):
-        print 'Outputing map %i out of %i' % (index + 1, len(icas)) 
-        map3d = np.zeros(mask.shape)
-        map3d[mask] = ic
-        # Modify the 3D map rather than the IC to avoid modifying
-        # the original data.
-        map3d *= auto_sign(ic, threshold=threshold)
-        save(Nifti1Image(map3d, sform, header=header),
-                          pjoin(output_dir, 'ic_no_thr%02i.nii' % index)
-                        )
-        
-        map3d[np.abs(map3d) < threshold] = 0
-        save(Nifti1Image(map3d, sform, header=header),
-                            pjoin(output_dir, 'ic%02i.nii' % index)
-                        )
-        if format is None:
-            continue
-        img = VolumeImg(map3d, affine=sform, world_space='mine')
+
+    img_files = list()
+    maps3d = np.rollaxis(maps3d, -1)
+    for index, map3d in enumerate(maps3d):
+        print 'Outputing image for map %i out of %i' \
+            % (index, len(maps3d))
+        # XYZ order the images, this should be done in the viz
+        # code.
+        img = VolumeImg(map3d, affine=affine, world_space='mine')
         img = img.xyz_ordered()
         map3d = img.get_data()
         this_affine = img.affine
-        img = VolumeImg(mask, affine=sform, world_space='mine',
-                              interpolation='nearest')
-        img = img.xyz_ordered()
-        mask_xyz = img.get_data()
-
-        x, y, z = am.find_cut_coords(map3d, mask=mask_xyz,
-                                        activation_threshold=1e-10)
+        x, y, z = am.find_cut_coords(map3d, activation_threshold=1e-10)
         x, y, z = am.coord_transform(x, y, z, this_affine)
-        pl.clf()
         if np.any(map3d != 0):
             # Force the colormap to be symetric:
             map_max = max(-map3d.min(), map3d.max())
@@ -122,7 +130,19 @@ def save_ics(icas, mask, threshold, output_dir, header,
                                                     title=title,
                                                     cmap=cmap,
                                                     **kwargs)
-        pl.savefig(pjoin(output_dir, 'map_%02i.%s' % (index, format)))
+        img_file = 'map_%02i.%s' % (index, format)
+        pl.savefig(pjoin(output_dir, img_file))
+        pl.clf()
+        img_files.append(img_file)
+
+    if format in ('png', 'jpg'):
+        report = markup.page()
+        report.init(title='CanICA report')
+
+        report.p(""" CanICA run, %s.""" % time.asctime())
+
+        report.img(src=img_files)
+        file(pjoin(output_dir, 'canica_report.html'), 'w').write(str(report))
 
 
 # EOF ##########################################################################
