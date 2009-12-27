@@ -22,7 +22,8 @@ def auto_sign(map, threshold=0):
     return 1
 
 
-def save_ics(icas, mask, threshold, output_dir, header, titles=None,
+def save_ics(icas, mask, threshold, output_dir, header, 
+                titles='map %(index)i',
                 format=None, cmap=am.cm.cold_hot, mean_img=None,
                 **kwargs):
     """ Save the independant compnents to Nifti and to images.
@@ -111,7 +112,10 @@ def save_ics(icas, mask, threshold, output_dir, header, titles=None,
             kwargs['vmax'] =  map_max
             map3d = np.ma.masked_equal(map3d, 0, copy=False)
             if titles is not None:
-                title = titles[index]
+                if isinstance(titles, basestring):
+                    title = titles % locals()
+                else:
+                    title = titles[index]
             else:
                 title = None
             am.plot_map_2d(map3d, this_affine, (x, y, z), figure=512,
