@@ -24,7 +24,7 @@ def auto_sign(map, threshold=0):
     return 1
 
 
-def save_ics(icas, mask, threshold, output_dir, header):
+def save_ics(icas, mask, threshold, output_dir, header, mean=None):
     """ Save the independant compnents to Nifti.
 
         Parameters
@@ -72,6 +72,27 @@ def save_ics(icas, mask, threshold, output_dir, header):
     save(Nifti1Image(maps3d, affine, header=header),
                           pjoin(output_dir, 'icas.nii')
                         )
+
+    # Save the mask
+    mask_header = header.copy()
+    mask_header['cal_min'] = 0
+    mask_header['cal_max'] = 1
+    save(Nifti1Image(mask, affine, header=mask_header),
+                        pjoin(output_dir, 'mask.nii')
+                        )
+
+    if mean is not None:
+        # save the mean
+        mean_img = np.zeros(maps3d.shape[:-1])
+        mean_img[mask] = mean
+        mean_header = header.copy()
+        mean_header['cal_min'] = mean.min()
+        mean_header['cal_max'] = mean.max()
+        save(Nifti1Image(mean_img, affine, header=mean_header),
+                            pjoin(output_dir, 'mean.nii')
+                            )
+        return maps3d, affine, mean_img
+
     return maps3d, affine
 
 

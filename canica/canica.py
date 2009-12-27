@@ -211,14 +211,11 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     header['cal_max'] = np.nanmax(ica_maps)
     header['cal_min'] = np.nanmin(ica_maps)
 
-
     if save_nifti or report:
-        maps3d, affine = save_ics(ica_maps, mask, threshold, 
-                        output_dir=working_dir, header=header)
+        maps3d, affine, mean_img = save_ics(ica_maps, mask, threshold, 
+                        output_dir=working_dir, header=header,
+                        mean=group_components.T[0])
     if report:
-        # First create an anat image from the mean.
-        mean_img = np.zeros(maps3d.shape[:-1])
-        mean_img[mask] = group_components.T[0]
         mean_img = np.ma.masked_array(mean_img, np.logical_not(mask))
         plot_ics(maps3d, affine, mean_img=mean_img,
                  titles='map %(index)i',
