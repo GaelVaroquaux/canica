@@ -19,7 +19,6 @@ from joblib import Memory
 
 # Local imports
 from .tools.parallel import Parallel, delayed
-from .io import series_from_mask
 from .algorithms.fastica import fastica
 from .viz import save_ics, plot_ics
 
@@ -27,13 +26,22 @@ from .viz import save_ics, plot_ics
 ################################################################################
 # First level analysis: principal component extraction at the subject level
 
-def session_pca(raw_filenames, mask):
+def session_pca(raw_filenames, mask, smooth=False):
     """ Do the preprocessing and calculate the PCA components for a
         single session.
+
+        Parameters
+        -----------
+        mask: 3d ndarray
+            3D mask array: true where a voxel should be used.
+        smooth: False or float, optional
+            If smooth is not False, it gives the size, in voxel of the
+            spatial smoothing to apply to the signal.
     """
     # Data preprocessing and loading.
-    # XXX: series_from_mask should go in nipy.neurospin.utils.mask
-    series, header = series_from_mask([raw_filenames, ], mask)
+    series, header = mask_utils.series_from_mask([raw_filenames, ], 
+                                                    mask, smooth=smooth,
+                                                    squeeze=True)
 
     # XXX: this should go in series_from_mask
     series -= series.mean(axis=-1)[:, np.newaxis]
@@ -48,7 +56,7 @@ def session_pca(raw_filenames, mask):
 
 
 def extract_subject_components(session_files, mask=None, n_jobs=1,
-                                              cachedir=None):
+                                              cachedir=None, smooth=False):
     """ Calculate principal components over different subjects.
     """
     # If cachedir is None, the Memory object is transparent.
@@ -65,7 +73,7 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
     # Spread the load on multiple CPUs
     pca = delayed(cache(session_pca))
     session_pcas = Parallel(n_jobs=n_jobs)(
-                                    pca(filenames, mask)
+                                    pca(filenames, mask, smooth=smooth)
                                     for filenames in session_files)
     pcas, pca_loadings, headers = zip(*session_pcas)
 
@@ -130,8 +138,8 @@ def extract_group_components(subject_components, variances,
 
 def canica(filenames, n_pca_components, ccs_threshold=None,
                 n_ica_components=None, do_cca=True, mask=None,
-                threshold_p_value=5e-2,
-                n_jobs=1, working_dir=None, return_mean=False,
+                threshold_p_value=5e-2, n_jobs=1, working_dir=None, 
+                return_mean=False, smooth=False,
                 save_nifti=False, report=False):
     """ CanICA: reproducible multi-session ICA components from fMRI
         datasets.
@@ -165,12 +173,29 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
             If -1, one job is started per CPU.
         working_dir: string, optional
             Optional directory name to use to store temporary cache.
+        smooth: False or float, optional
+            If smooth is not False, it gives the size, in voxel of the
+            spatial smoothing to apply to the signal.
         save_nifti: boolean, optional
             If save_nifti is True, a nifti file of the results is saved
             in the working_dir.
         report: boolean, optional
             If report is True, an html report is saved in the
             working_dir.
+
+        Returns
+        -------
+        ica_maps: 2D ndarray
+            The masked maps
+        mask: 3D ndarray
+            The corresponding mask
+        threshold: float
+            The threshold corresponding to the given p-value        
+        header: dictonnary
+            The header information of the input datasets
+        group_components: 2D ndarray, optional
+            If return_mean is True, the mean input image of each subject
+            is returned.
   
         Notes
         -----
@@ -180,6 +205,8 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
         If report or save_nifti is specified, a working_dir should be
         specified.
     """
+    if len(filenames) == 0:
+        raise ValueError('No files where passed')
     if n_ica_components is None and ccs_threshold is None:
         raise ValueError('You need to specify either a number of '
             'ICA components, or a threshold for the canonical correlations')
@@ -191,7 +218,8 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     pcas, mask, variances, header = extract_subject_components(filenames,
                                                        n_jobs=n_jobs,
                                                        mask=mask,
-                                                       cachedir=cachedir)
+                                                       cachedir=cachedir,
+                                                       smooth=smooth)
 
     # Use np.asarray to get rid of memmapped arrays
     pcas = [np.asarray(pca[:, :n_pca_components].T) for pca in pcas]
