@@ -92,19 +92,25 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
             report.h1("Parameters")
             for name, value in parameters.iteritems():
                 if isinstance(value, list) or isinstance(value, tuple):
-                    description = list()
+                    report.p(r'<strong>%s</strong>:' % 
+                                        name)
+                    report.ul()
+                    descriptions = list()
                     for item in value:
-                        this_description = pprint.pformat(item)
-                        if len(this_description) > 1500:
-                            this_description = '%s...' % this_description[:700]
-                        description.append(this_description)
-                    description = '[%s]' % '&nbsp&nbsp&nbsp&nbsp<br/>'.join(description)
+                        description = pprint.pformat(item)
+                        if len(description) > 1000:
+                            description = ('%s...<br>&nbsp;...%s' 
+                                    % (description[:200], description[-200:]))
+                            descriptions.append(description)
+                    report.li(descriptions)
+                    report.ul.close()
                 else:
                     description = pprint.pformat(value)
                     if len(description) > 1500:
-                        description = '%s...' % description[:700]
-                report.p(r'<strong>%s</strong>: %s' % 
-                                    (name, description))
+                        description = ('%s...<br>&nbsp;...%s' 
+                                % (description[:500], description[-500:]))
+                    report.p(r'<strong>%s</strong>: %s' % 
+                                        (name, description))
         report_file = pjoin(output_dir, 'canica_report.html')
         file(report_file, 'w').write(str(report))
         print 80*'_'
