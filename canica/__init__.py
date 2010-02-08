@@ -4,5 +4,5 @@
 
 from canica import canica
 from tools.super_glob import super_glob
-from viz import save_ics
+from output import save_ics
 

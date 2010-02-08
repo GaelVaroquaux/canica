@@ -20,7 +20,7 @@ from joblib import Memory
 # Local imports
 from .tools.parallel import Parallel, delayed
 from .algorithms.fastica import fastica
-from .viz import save_ics, plot_ics
+from .output import save_ics
 
 
 ################################################################################
@@ -245,6 +245,7 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
                         mean=group_components.T[0])
     if report:
         mean_img = np.ma.masked_array(mean_img, np.logical_not(mask))
+        from .viz import plot_ics
         plot_ics(maps3d, affine, mean_img=mean_img,
                  titles='map %(index)i',
                  output_dir=working_dir, report=True, format='png')
