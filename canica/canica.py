@@ -210,6 +210,8 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     if n_ica_components is None and ccs_threshold is None:
         raise ValueError('You need to specify either a number of '
             'ICA components, or a threshold for the canonical correlations')
+    # Store the original mask value, for report
+    orig_mask = mask
 
     if working_dir is not None:
         cachedir = pjoin(working_dir, 'cache')
@@ -246,8 +248,19 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     if report:
         mean_img = np.ma.masked_array(mean_img, np.logical_not(mask))
         from .viz import plot_ics
+        parameters = dict(
+                filenames=filenames,
+                n_pca_components=n_pca_components,
+                ccs_threshold=ccs_threshold,
+                n_ica_components=n_ica_components,
+                do_cca=do_cca,
+                mask=orig_mask,
+                threshold_p_value=threshold_p_value,
+                smooth=smooth,
+                working_dir=working_dir,
+            )
         plot_ics(maps3d, affine, mean_img=mean_img,
-                 titles='map %(index)i',
+                 titles='map %(index)i', parameters=parameters,
                  output_dir=working_dir, report=True, format='png')
     if not return_mean:
         return ica_maps, mask, threshold, header

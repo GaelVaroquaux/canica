@@ -3,6 +3,7 @@ Visualization functions for CanICA.
 """
 from os.path import join as pjoin
 import time
+import pprint
 
 # Major scientific library imports
 import numpy as np
@@ -17,7 +18,9 @@ from .tools import markup
 
 def plot_ics(maps3d, affine, output_dir, titles=None, 
             format='png', cmap=viz.cm.cold_hot, mean_img=None,
-            report=True, **kwargs):
+            report=True, 
+            parameters=None,
+            **kwargs):
     """ Save the ics to image file, and to a report.
 
         Parameters
@@ -31,6 +34,8 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
             example pylab.cm.hot
         report: boolean, optional
             If report is True, an html report is saved.
+        parameters: None or dictionnary, optional
+            Extra parameters to put in the report.
         kwargs:
             Extra keyword arguments are passed to plot_map_2d.
     """
@@ -80,8 +85,26 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
         report.init(title='CanICA report')
 
         report.p(""" CanICA run, %s.""" % time.asctime())
+        report.h1("Independent components")
 
         report.img(src=img_files)
+        if parameters is not None:
+            report.h1("Parameters")
+            for name, value in parameters.iteritems():
+                if isinstance(value, list) or isinstance(value, tuple):
+                    description = list()
+                    for item in value:
+                        this_description = pprint.pformat(item)
+                        if len(this_description) > 1500:
+                            this_description = '%s...' % this_description[:700]
+                        description.append(this_description)
+                    description = '[%s]' % '&nbsp&nbsp&nbsp&nbsp<br/>'.join(description)
+                else:
+                    description = pprint.pformat(value)
+                    if len(description) > 1500:
+                        description = '%s...' % description[:700]
+                report.p(r'<strong>%s</strong>: %s' % 
+                                    (name, description))
         report_file = pjoin(output_dir, 'canica_report.html')
         file(report_file, 'w').write(str(report))
         print 80*'_'
