@@ -92,18 +92,19 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
             report.h1("Parameters")
             for name, value in parameters.iteritems():
                 if isinstance(value, list) or isinstance(value, tuple):
-                    report.p(r'<strong>%s</strong>:' % 
-                                        name)
+                    report.p(r'<strong>%s</strong>: %s(' % 
+                                (name, value.__class__.__name__))
                     report.ul()
                     descriptions = list()
                     for item in value:
                         description = pprint.pformat(item)
                         if len(description) > 1000:
-                            description = ('%s...<br>&nbsp;...%s' 
+                            description = ('%s...<br>&nbsp;&nbsp;&nbsp;...%s' 
                                     % (description[:200], description[-200:]))
                             descriptions.append(description)
                     report.li(descriptions)
                     report.ul.close()
+                    report.p(')')
                 else:
                     description = pprint.pformat(value)
                     if len(description) > 1500:
