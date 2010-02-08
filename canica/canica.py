@@ -261,7 +261,8 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
             )
         plot_ics(maps3d, affine, mean_img=mean_img,
                  titles='map %(index)i', parameters=parameters,
-                 output_dir=working_dir, report=True, format='png')
+                 output_dir=pjoin(working_dir, 'report'), 
+                 report=True, format='png')
     if not return_mean:
         return ica_maps, mask, threshold, header
     else:

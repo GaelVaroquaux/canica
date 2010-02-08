@@ -1,6 +1,7 @@
 """
 Visualization functions for CanICA.
 """
+import os
 from os.path import join as pjoin
 import time
 import pprint
@@ -39,6 +40,8 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
         kwargs:
             Extra keyword arguments are passed to plot_map_2d.
     """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     if mean_img is not None:
         img = VolumeImg(mean_img, affine=affine, world_space='mine')
         img = img.xyz_ordered()
@@ -48,7 +51,8 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
     img_files = list()
     maps3d = np.rollaxis(maps3d, -1)
     for index, map3d in enumerate(maps3d):
-        img_file = pjoin(output_dir, 'map_%02i.%s' % (index, format))
+        img_base_file = 'map_%02i.%s' % (index, format)
+        img_file = pjoin(output_dir, img_base_file)
         print 'Outputing image for map %2i out of % 2i:  %s' \
             % (index+1, len(maps3d), img_file)
         # XYZ order the images, this should be done in the viz
@@ -78,7 +82,7 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
                                                     **kwargs)
         pl.savefig(img_file)
         pl.clf()
-        img_files.append(img_file)
+        img_files.append(img_base_file)
 
     if format in ('png', 'jpg'):
         report = markup.page()
@@ -112,7 +116,7 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
                                 % (description[:500], description[-500:]))
                     report.p(r'<strong>%s</strong>: %s' % 
                                         (name, description))
-        report_file = pjoin(output_dir, 'canica_report.html')
+        report_file = pjoin(output_dir, 'canica.html')
         file(report_file, 'w').write(str(report))
         print 80*'_'
         print 'CanICA: report in %s' % report_file
