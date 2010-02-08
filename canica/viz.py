@@ -11,7 +11,7 @@ import pylab as pl
 
 # Neuroimaging library imports
 from nipy.io.imageformats import save, Nifti1Image, Nifti1Header
-from nipy.neurospin.viz import activation_maps as am
+from nipy.neurospin import viz
 from nipy.neurospin.datasets import VolumeImg
 
 from .tools import markup
@@ -97,7 +97,7 @@ def save_ics(icas, mask, threshold, output_dir, header, mean=None):
 
 
 def plot_ics(maps3d, affine, output_dir, titles=None, 
-            format='png', cmap=am.cm.cold_hot, mean_img=None,
+            format='png', cmap=viz.cm.cold_hot, mean_img=None,
             report=True, **kwargs):
     """ Save the ics to image file, and to a report.
 
@@ -132,8 +132,8 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
         img = img.xyz_ordered()
         map3d = img.get_data()
         this_affine = img.affine
-        x, y, z = am.find_cut_coords(map3d, activation_threshold=1e-10)
-        x, y, z = am.coord_transform(x, y, z, this_affine)
+        x, y, z = viz.find_cut_coords(map3d, activation_threshold=1e-10)
+        x, y, z = viz.coord_transform(x, y, z, this_affine)
         if np.any(map3d != 0):
             # Force the colormap to be symetric:
             map_max = max(-map3d.min(), map3d.max())
@@ -147,7 +147,7 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
                     title = titles[index]
             else:
                 title = None
-            am.plot_map_2d(map3d, this_affine, (x, y, z), figure=512,
+            viz.plot_map(map3d, this_affine, (x, y, z), figure=512,
                                                     title=title,
                                                     cmap=cmap,
                                                     **kwargs)
