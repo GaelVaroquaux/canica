@@ -39,9 +39,8 @@ def session_pca(raw_filenames, mask, smooth=False):
             spatial smoothing to apply to the signal.
     """
     # Data preprocessing and loading.
-    series, header = mask_utils.series_from_mask([raw_filenames, ], 
-                                                    mask, smooth=smooth,
-                                                    squeeze=True)
+    series, header = mask_utils.series_from_mask(raw_filenames, 
+                                                    mask, smooth=smooth)
 
     # XXX: this should go in series_from_mask
     series -= series.mean(axis=-1)[:, np.newaxis]
