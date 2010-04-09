@@ -59,7 +59,11 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
     """ Calculate principal components over different subjects.
     """
     # If cachedir is None, the Memory object is transparent.
-    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
+    # We do not use memmaping here, as it will create a read-only header,
+    # which is not what we want. This will not be a performance
+    # bottleneck in the cross-validation, has this 'memory' is hidden by
+    # another one in the cross-validation loop.
+    memory = Memory(cachedir=cachedir, debug=True)
     cache = memory.cache
 
     # extract the common mask.
