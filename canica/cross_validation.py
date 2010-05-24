@@ -12,10 +12,10 @@ from scipy import stats
 
 # Unusual libraries import
 from joblib import Memory
+from joblib.parallel import Parallel, delayed
 
 # Local imports
 from .main import canica
-from .tools.parallel import Parallel, delayed
 
 ################################################################################
 # Utilities to compare maps

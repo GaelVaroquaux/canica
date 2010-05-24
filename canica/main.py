@@ -19,7 +19,7 @@ from nipy.io.imageformats import load
 from joblib import Memory
 
 # Local imports
-from .tools.parallel import Parallel, delayed
+from joblib.parallel import Parallel, delayed
 from .algorithms.fastica import fastica
 from .output import save_ics
 
@@ -93,11 +93,7 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
             must be specified if two_levels is True.
     """
     # If cachedir is None, the Memory object is transparent.
-    # We do not use memmaping here, as it will create a read-only header,
-    # which is not what we want. This will not be a performance
-    # bottleneck in the cross-validation, has this 'memory' is hidden by
-    # another one in the cross-validation loop.
-    memory = Memory(cachedir=cachedir, debug=True)
+    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
     cache = memory.cache
 
     # extract the common mask.
@@ -164,7 +160,7 @@ def extract_group_components(subject_components, variances,
 
     # Inter-subject CCA
     memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
-    svd = memory.cache(np.linalg.svd)
+    svd = memory.cache(linalg.svd)
     cca_maps, ccs, _ = svd(group_components, full_matrices=False)
     # Save memory
     del group_components
@@ -271,6 +267,10 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
                                             n_first_components=n_pca_components,
                                             cachedir=cachedir,
                                             smooth=smooth)
+    # Get rid of memmapping in the header:
+    for key, value in header.items():
+        if isinstance(value, np.ndarray):
+            header[key] = np.asarray(value).copy()
 
     # Use np.asarray to get rid of memmapped arrays
     pcas = [np.asarray(pca[:, :n_pca_components].T) for pca in pcas]
