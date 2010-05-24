@@ -14,7 +14,7 @@ from scipy import stats
 from joblib import Memory
 
 # Local imports
-from .canica import canica
+from .main import canica
 from .tools.parallel import Parallel, delayed
 
 ################################################################################

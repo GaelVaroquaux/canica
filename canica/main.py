@@ -5,10 +5,11 @@ CanICA: Estimation of reproducible group-level ICA patterns for fMRI
 
 """
 from os.path import join as pjoin
+import itertools
 
 # Major scientific libraries import
 import numpy as np
-from scipy import stats
+from scipy import stats, linalg
 
 # Neuroimaging libraries import
 import nipy.neurospin.utils.mask as mask_utils
@@ -26,7 +27,8 @@ from .output import save_ics
 ################################################################################
 # First level analysis: principal component extraction at the subject level
 
-def session_pca(raw_filenames, mask, smooth=False):
+def session_pca(raw_filenames, mask, smooth=False, 
+                two_levels=False, n_first_components=None):
     """ Do the preprocessing and calculate the PCA components for a
         single session.
 
@@ -37,26 +39,58 @@ def session_pca(raw_filenames, mask, smooth=False):
         smooth: False or float, optional
             If smooth is not False, it gives the size, in voxel of the
             spatial smoothing to apply to the signal.
+        two_levels: boolean, optional
+            If two_levels is True, the filenames are a list of filenames
+            corresponding to various sessions, and a multi-level model is
+            applied based on a first CCA.
+        n_first_components: integer, optional
+            The number of components to retain at the first level. This
+            must be specified if two_levels is True.
     """
     # Data preprocessing and loading.
-    series, header = mask_utils.series_from_mask(raw_filenames, 
-                                                    mask, smooth=smooth)
+    if not two_levels:
+        series, header = mask_utils.series_from_mask(raw_filenames, 
+                                                        mask, smooth=smooth)
 
-    # XXX: this should go in series_from_mask
-    series -= series.mean(axis=-1)[:, np.newaxis]
-    std = series.std(axis=-1)
-    std[std==0] = 1
-    series /= std[:, np.newaxis]
-    del std
-    # PCA
-    components, loadings, _ = np.linalg.svd(series, full_matrices=False)
-
+        # XXX: this should go in series_from_mask
+        series -= series.mean(axis=-1)[:, np.newaxis]
+        std = series.std(axis=-1)
+        std[std==0] = 1
+        series /= std[:, np.newaxis]
+        del std
+        # PCA
+        components, loadings, _ = linalg.svd(series, full_matrices=False)
+    else:
+        if n_first_components is None:
+            raise ValueError('If two_levels is True, n_first_components '
+                              'must be specified')
+        components = list()
+        for session_files in raw_filenames:
+            these_components, _, header = \
+                            session_pca(session_files, mask, smooth=smooth)
+            components.append(these_components[:,
+                                :n_first_components])
+            del these_components
+        # CCA
+        components = np.hstack(components)
+        components, loadings, _ = linalg.svd(components,
+                                            full_matrices=False)
     return components, loadings, header
 
 
 def extract_subject_components(session_files, mask=None, n_jobs=1,
+                                              two_levels=False,
+                                              n_first_components=None,
                                               cachedir=None, smooth=False):
     """ Calculate principal components over different subjects.
+
+        two_levels: boolean, optional
+            If two_levels is True, the session_files passed represents
+            multi-session data and a two-level hierarchical model is
+            applied.
+        n_first_components: integer, optional
+            The number of components to retain at the first level. This
+            must be specified if two_levels is True.
     """
     # If cachedir is None, the Memory object is transparent.
     # We do not use memmaping here, as it will create a read-only header,
@@ -68,15 +102,20 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
 
     # extract the common mask.
     if mask is None:
-        mask = cache(mask_utils.compute_mask_sessions)(session_files)
+        if not two_levels:
+            mask = cache(mask_utils.compute_mask_sessions)(session_files)
+        else:
+            mask = cache(mask_utils.compute_mask_sessions)(
+                                            itertools.chain(*session_files))
     elif isinstance(mask, basestring):
         mask = load(mask).get_data().astype(np.bool)
  
-
     # Spread the load on multiple CPUs
     pca = delayed(cache(session_pca))
     session_pcas = Parallel(n_jobs=n_jobs)(
-                                    pca(filenames, mask, smooth=smooth)
+                                    pca(filenames, mask, smooth=smooth,
+                                        two_levels=two_levels,
+                                        n_first_components=n_first_components)
                                     for filenames in session_files)
     pcas, pca_loadings, headers = zip(*session_pcas)
 
@@ -141,9 +180,10 @@ def extract_group_components(subject_components, variances,
 
 def canica(filenames, n_pca_components, ccs_threshold=None,
                 n_ica_components=None, do_cca=True, mask=None,
+                two_levels=False,
                 threshold_p_value=5e-2, n_jobs=1, working_dir=None, 
                 return_mean=False, smooth=False,
-                save_nifti=False, report=False):
+                save_nifti=True, report=True):
     """ CanICA: reproducible multi-session ICA components from fMRI
         datasets.
 
@@ -174,6 +214,10 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
         n_jobs: int, optional
             Number of jobs to start on a multi-processor machine.
             If -1, one job is started per CPU.
+        two_levels: boolean, optional
+            If two_levels is True, the filenames are a list of filenames
+            corresponding to various sessions, and a multi-level model is
+            applied based on a first CCA.
         working_dir: string, optional
             Optional directory name to use to store temporary cache.
         smooth: False or float, optional
@@ -221,10 +265,12 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     else:
         cachedir = None
     pcas, mask, variances, header = extract_subject_components(filenames,
-                                                       n_jobs=n_jobs,
-                                                       mask=mask,
-                                                       cachedir=cachedir,
-                                                       smooth=smooth)
+                                            n_jobs=n_jobs,
+                                            mask=mask,
+                                            two_levels=two_levels,
+                                            n_first_components=n_pca_components,
+                                            cachedir=cachedir,
+                                            smooth=smooth)
 
     # Use np.asarray to get rid of memmapped arrays
     pcas = [np.asarray(pca[:, :n_pca_components].T) for pca in pcas]
@@ -241,31 +287,33 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     threshold = (stats.norm.isf(0.5*threshold_p_value)
                                 /np.sqrt(ica_maps.shape[0]))
 
-    header['cal_max'] = np.nanmax(ica_maps)
-    header['cal_min'] = np.nanmin(ica_maps)
-
     if save_nifti or report:
-        maps3d, affine, mean_img = save_ics(ica_maps, mask, threshold, 
-                        output_dir=working_dir, header=header,
-                        mean=group_components.T[0])
-    if report:
-        mean_img = np.ma.masked_array(mean_img, np.logical_not(mask))
-        from .viz import plot_ics
-        parameters = dict(
-                filenames=filenames,
-                n_pca_components=n_pca_components,
-                ccs_threshold=ccs_threshold,
-                n_ica_components=n_ica_components,
-                do_cca=do_cca,
-                mask=orig_mask,
-                threshold_p_value=threshold_p_value,
-                smooth=smooth,
-                working_dir=working_dir,
-            )
-        plot_ics(maps3d, affine, mean_img=mean_img,
-                 titles='map %(index)i', parameters=parameters,
-                 output_dir=pjoin(working_dir, 'report'), 
-                 report=True, format='png')
+        if working_dir is None:
+            # XXX: Should be using warnings or logger
+            print '[CANICA] Warning: saving or report is specified, but '\
+                  'no working directory has been specified'
+        else:
+            maps3d, affine, mean_img = save_ics(ica_maps, mask, threshold, 
+                            output_dir=working_dir, header=header,
+                            mean=group_components.T[0])
+            if report:
+                mean_img = np.ma.masked_array(mean_img, np.logical_not(mask))
+                from .viz import plot_ics
+                parameters = dict(
+                        filenames=filenames,
+                        n_pca_components=n_pca_components,
+                        ccs_threshold=ccs_threshold,
+                        n_ica_components=n_ica_components,
+                        do_cca=do_cca,
+                        mask=orig_mask,
+                        threshold_p_value=threshold_p_value,
+                        smooth=smooth,
+                        working_dir=working_dir,
+                    )
+                plot_ics(maps3d, affine, mean_img=mean_img,
+                        titles='map %(index)i', parameters=parameters,
+                        output_dir=pjoin(working_dir, 'report'), 
+                        report=True, format='png')
     if not return_mean:
         return ica_maps, mask, threshold, header
     else:

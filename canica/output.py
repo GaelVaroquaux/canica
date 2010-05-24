@@ -50,6 +50,9 @@ def save_ics(icas, mask, threshold, output_dir, header, mean=None):
         # Nifti1Header.
         header = None
 
+    header['cal_max'] = np.nanmax(icas)
+    header['cal_min'] = np.nanmin(icas)
+
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
