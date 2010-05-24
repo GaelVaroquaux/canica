@@ -179,6 +179,7 @@ def fastica(X, n_comp=None,
 
     if type(fun) is types.StringType:
         # Some standard nonlinear functions
+        # XXX: these should be optimized, as they can be a bottleneck.
         if fun == 'logcosh':
             def g(x, fun_args):
                 alpha = fun_args.get('alpha', 1.0)
