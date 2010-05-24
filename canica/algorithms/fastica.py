@@ -9,6 +9,7 @@ Independent Component Analysis, by  Hyvarinen et al.
 # License: BSD 3 clause
 
 import numpy as np
+from scipy import linalg
 import types
 
 __all__ = ['fastica']
@@ -62,7 +63,7 @@ def _ica_def(X, tol, g, gprime, fun_args, maxit, w_init):
 def _sym_decorrelation(W):
     """ Symmetric decorrelation """
     K = np.dot(W, W.T)
-    s, u = np.linalg.eigh(K) 
+    s, u = linalg.eigh(K) 
     # u (resp. s) contains the eigenvectors (resp. square roots of 
     # the eigenvalues) of W * W.T 
     u, W = [np.asmatrix(e) for e in (u, W)]
@@ -221,7 +222,7 @@ def fastica(X, n_comp=None,
         X = X - X.mean(axis=-1)[:, np.newaxis]
 
         # Whitening and preprocessing by PCA
-        u, d, _ = np.linalg.svd(X, full_matrices=False)
+        u, d, _ = linalg.svd(X, full_matrices=False)
         del _
         K = (u/d).T[:n_comp]  # see (6.33) p.140
         del u, d
