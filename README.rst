@@ -24,7 +24,7 @@ How CanICA compare to Melodic or Gift?
 =======================================
 
 As of Spring 2010, CanICA is more reproducible and offers better
-statistical control.
+statistical control (see references).
 
 On the other hand, it lacks a nice user interface. In addition, it does
 not offer a way to estimate back-projected subject-level components,
