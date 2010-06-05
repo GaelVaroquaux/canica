@@ -20,6 +20,18 @@ an explicit model of the signal. The reference papers are:
 Pre-prints for both papers are available on hal
 (http://hal.archives-ouvertes.fr)
 
+How CanICA compare to Melodic or Gift?
+=======================================
+
+As of Spring 2010, CanICA is more reproducible and offers better
+statistical control.
+
+On the other hand, it lacks a nice user interface. In addition, it does
+not offer a way to estimate back-projected subject-level components,
+similar to dual-regression. For someone with a mathematical understanding
+of dual-regression, it should be easy to apply dual-regression on the
+output maps of CanICA.
+
 Using CanICA
 ==============
 
@@ -33,18 +45,6 @@ directory.
     use a lot of memory. This means that you will probably need a
     **64bit** OS and version of Python. If you get a *MemoryError* when
     running CanICA on your data, you should switch to 64bit.
-
-How CanICA compare to Melodic or Gift?
-=======================================
-
-As of Spring 2010, CanICA is more reproducible and offers better
-statistical control.
-
-On the other hand, it lacks a nice user interface. In addition, it does
-not offer a way to estimate back-projected subject-level components,
-similar to dual-regression. For someone with a mathematical understanding
-of dual-regression, it should be easy to apply dual-regression on the
-output maps of CanICA.
 
 Installing CanICA
 ===================
