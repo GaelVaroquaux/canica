@@ -48,7 +48,13 @@ def save_ics(icas, mask, threshold, output_dir, header, mean=None):
         affine = header['sform']
         # XXX: I don't know how to convert a dictionnary to a
         # Nifti1Header.
-        header = None
+        h = Nifti1Header()
+        for k, v in header.iteritems():
+            try:
+                h[k] = v
+            except ValueError:
+                pass
+        header = h
 
     header['cal_max'] = np.nanmax(icas)
     header['cal_min'] = np.nanmin(icas)
