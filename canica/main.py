@@ -93,7 +93,7 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
             must be specified if two_levels is True.
     """
     # If cachedir is None, the Memory object is transparent.
-    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
+    memory = Memory(cachedir=cachedir, mmap_mode='r')
     cache = memory.cache
 
     # extract the common mask.
@@ -122,7 +122,7 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
 # Group-level analysis: inter-subject extraction of ICA maps
 
 def ica_step(group_maps, group_variance, cachedir=None):
-    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
+    memory = Memory(cachedir=cachedir, mmap_mode='r')
     # We do a spatial ICA: the arrays are transposed in the following,
     # axis1 = component, and axis2 is voxel number.
 
@@ -159,7 +159,7 @@ def extract_group_components(subject_components, variances,
     del subject_components
 
     # Inter-subject CCA
-    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
+    memory = Memory(cachedir=cachedir, mmap_mode='r')
     svd = memory.cache(linalg.svd)
     cca_maps, ccs, _ = svd(group_components, full_matrices=False)
     # Save memory
