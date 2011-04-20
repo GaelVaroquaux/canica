@@ -26,7 +26,7 @@ from joblib import Memory, Parallel, delayed
 
 # Local imports
 from .algorithms.fastica import fastica
-from .output import save_ics
+from .output import output
 
 
 ################################################################################
@@ -287,31 +287,21 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
                                 /np.sqrt(ica_maps.shape[0]))
 
     if save_nifti or report:
-        if working_dir is None:
-            # XXX: Should be using warnings or logger
-            print '[CANICA] Warning: saving or report is specified, but '\
-                  'no working directory has been specified'
-        else:
-            maps3d, affine, mean_img = save_ics(ica_maps, mask, threshold, 
-                            output_dir=working_dir, header=header,
-                            mean=group_components.T[0])
-            if report:
-                mean_img = np.ma.masked_array(mean_img, np.logical_not(mask))
-                from .viz import plot_ics
-                parameters = dict(
-                        filenames=filenames,
-                        n_pca_components=n_pca_components,
-                        ccs_threshold=ccs_threshold,
-                        n_ica_components=n_ica_components,
-                        mask=orig_mask,
-                        threshold_p_value=threshold_p_value,
-                        smooth=smooth,
-                        working_dir=working_dir,
-                    )
-                plot_ics(maps3d, affine, mean_img=mean_img,
-                        titles='map %(index)i', parameters=parameters,
-                        output_dir=pjoin(working_dir, 'report'), 
-                        report=True, format='png')
+        parameters = dict(
+                filenames=filenames,
+                n_pca_components=n_pca_components,
+                ccs_threshold=ccs_threshold,
+                n_ica_components=n_ica_components,
+                mask=orig_mask,
+                threshold_p_value=threshold_p_value,
+                smooth=smooth,
+                working_dir=working_dir,
+            )
+        output(ica_maps, mask, threshold, header, working_dir=working_dir,
+                parameters=parameters,
+                mean=group_components.T[0], 
+                save_nifti=save_nifti, report=report)
+
     if not return_mean:
         return ica_maps, mask, threshold, header
     else:

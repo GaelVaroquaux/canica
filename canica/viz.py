@@ -16,7 +16,7 @@ try:
     from nipy.neurospin.datasets import VolumeImg
 except:
     from nipy.labs import viz
-    from nipy.neurospin.datasets import VolumeImg
+    from nipy.labs.datasets import VolumeImg
 
 from .tools import markup
 
@@ -109,7 +109,7 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
                         if len(description) > 1000:
                             description = ('%s...<br>&nbsp;&nbsp;&nbsp;...%s' 
                                     % (description[:200], description[-200:]))
-                            descriptions.append(description)
+                        descriptions.append(description)
                     report.li(descriptions)
                     report.ul.close()
                     report.p(')')

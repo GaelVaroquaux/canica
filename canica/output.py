@@ -103,5 +103,26 @@ def save_ics(icas, mask, threshold, output_dir, header, mean=None):
     return maps3d, affine
 
 
+def output(icas, mask, threshold, header, working_dir=None,
+           parameters=None, titles='map %(index)i',
+           mean=None, save_nifti=True, report=True):
+    """ Output routines: save data and report.
+    """
+    if save_nifti or report:
+        if working_dir is None:
+            # XXX: Should be using warnings or logger
+            print '[CANICA] Warning: saving or report is specified, but '\
+                  'no working directory has been specified'
+        else:
+            maps3d, affine, mean_img = save_ics(icas, mask, threshold, 
+                            output_dir=working_dir, header=header,
+                            mean=mean)
+            if report:
+                mean_img = np.ma.masked_array(mean_img, np.logical_not(mask))
+                from .viz import plot_ics
+                plot_ics(maps3d, affine, mean_img=mean_img,
+                        titles=titles, parameters=parameters,
+                        output_dir=pjoin(working_dir, 'report'), 
+                        report=True, format='png')
 
 # EOF ##########################################################################
