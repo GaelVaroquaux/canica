@@ -267,6 +267,9 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
                                             cachedir=cachedir,
                                             smooth=smooth)
     # Get rid of memmapping in the header:
+    if (hasattr(header, '_header_data') 
+            and isinstance(header._header_data, np.ndarray)):
+        header._header_data = np.asarray(header._header_data).copy()
     for key, value in header.items():
         if isinstance(value, np.ndarray):
             header[key] = np.asarray(value).copy()
