@@ -8,7 +8,10 @@ from os.path import join as pjoin
 import numpy as np
 
 # Neuroimaging library imports
-from nipy.io.imageformats import save, Nifti1Image, Nifti1Header
+try:
+    from nibabel import save, Nifti1Image, Nifti1Header
+except ImportError:
+    from nipy.io.imageformats import save, Nifti1Image, Nifti1Header
 
 
 def auto_sign(map, threshold=0):
@@ -98,6 +101,7 @@ def save_ics(icas, mask, threshold, output_dir, header, mean=None):
         return maps3d, affine, mean_img
 
     return maps3d, affine
+
 
 
 # EOF ##########################################################################

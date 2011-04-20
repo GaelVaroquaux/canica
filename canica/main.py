@@ -12,14 +12,19 @@ import numpy as np
 from scipy import stats, linalg
 
 # Neuroimaging libraries import
-import nipy.neurospin.utils.mask as mask_utils
-from nipy.io.imageformats import load
+try:
+    import nipy.labs.mask as mask_utils
+except:
+    import nipy.neurospin.utils.mask as mask_utils
+try:
+    from nibabel import load
+except ImportError:
+    from nipy.io.imageformats import load
 
 # Unusual libraries import
-from joblib import Memory
+from joblib import Memory, Parallel, delayed
 
 # Local imports
-from joblib.parallel import Parallel, delayed
 from .algorithms.fastica import fastica
 from .output import save_ics
 
@@ -141,15 +146,10 @@ def ica_step(group_maps, group_variance, cachedir=None):
 
 
 def extract_group_components(subject_components, variances,
-                ccs_threshold=None, n_group_components=None, do_cca=True,
+                ccs_threshold=None, n_group_components=None, 
                 cachedir=None):
     # Use asarray to cast to a non memmapped array
     subject_components = np.asarray(subject_components)
-
-    if not do_cca:
-        for component, variance in zip(subject_components, variances):
-            component *= variance[:, np.newaxis]
-        del component, variance
 
     # The group components (concatenated subject components)
     group_components = subject_components.T
@@ -175,7 +175,7 @@ def extract_group_components(subject_components, variances,
 # Actual estimation of the complete CanICA model
 
 def canica(filenames, n_pca_components, ccs_threshold=None,
-                n_ica_components=None, do_cca=True, mask=None,
+                n_ica_components=None, mask=None,
                 two_levels=False,
                 threshold_p_value=5e-2, n_jobs=1, working_dir=None, 
                 return_mean=False, smooth=False,
@@ -198,15 +198,14 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
             analysis.
         n_ica_components: float, optional
             Number of ICA to retain.
-        do_cca: boolean, optional
-            If True, a canonical correlations analysis (CCA) is used to
-            go from the subject patterns to the group model.
         mask: 3D boolean ndarray or string, optional
             The mask to use to extract the interesting time series.
             Can be either the array of the mask, or the name of a file
             containing the mask.
         threshold_p_value, float, optional
             The P value to use while thresholding the final ICA maps.
+            See [Varoquaux ISBI 2010] for the description of the null 
+            hypothesis.
         n_jobs: int, optional
             Number of jobs to start on a multi-processor machine.
             If -1, one job is started per CPU.
@@ -280,7 +279,7 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     group_components, group_variance = extract_group_components(pcas,
                                         variances, ccs_threshold=ccs_threshold,
                                         n_group_components=n_ica_components,
-                                        do_cca=do_cca, cachedir=cachedir)
+                                        cachedir=cachedir)
 
     ica_maps = ica_step(group_components, group_variance, cachedir=cachedir)
 
@@ -304,7 +303,6 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
                         n_pca_components=n_pca_components,
                         ccs_threshold=ccs_threshold,
                         n_ica_components=n_ica_components,
-                        do_cca=do_cca,
                         mask=orig_mask,
                         threshold_p_value=threshold_p_value,
                         smooth=smooth,

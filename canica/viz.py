@@ -11,8 +11,12 @@ import numpy as np
 import pylab as pl
 
 # Neuroimaging library imports
-from nipy.neurospin import viz
-from nipy.neurospin.datasets import VolumeImg
+try:
+    from nipy.neurospin import viz
+    from nipy.neurospin.datasets import VolumeImg
+except:
+    from nipy.labs import viz
+    from nipy.neurospin.datasets import VolumeImg
 
 from .tools import markup
 

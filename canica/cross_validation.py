@@ -11,8 +11,7 @@ import numpy as np
 from scipy import stats
 
 # Unusual libraries import
-from joblib import Memory
-from joblib.parallel import Parallel, delayed
+from joblib import Memory, Parallel, delayed
 
 # Local imports
 from .main import canica
@@ -82,6 +81,7 @@ def merge_stats(result_dicts):
 
     return out_dict
 
+
 def report_stats(stat_dict):
     """ Save a report of the cross-correlation statistics.
     """
@@ -110,12 +110,12 @@ def report_stats(stat_dict):
 
 def canica_pair(file_pair, n_pca_components, mask, threshold,
                         reference_icas,
-                        ccs_threshold=None,
-                        n_ica_components=None, do_cca=True,
+                        smooth=None, ccs_threshold=None,
+                        n_ica_components=None, 
                         n_jobs=1, working_dir=None):
     ica1, ica2 = [canica(files, n_pca_components, ccs_threshold=ccs_threshold,
-                            n_ica_components=n_ica_components, do_cca=do_cca,
-                            mask=mask,
+                            n_ica_components=n_ica_components, 
+                            mask=mask, smooth=smooth,
                             n_jobs=n_jobs, working_dir=working_dir)
                         for files in file_pair]
 
@@ -145,7 +145,7 @@ def canica_pair(file_pair, n_pca_components, mask, threshold,
 
 def canica_split_half(filenames, n_pca_components, n_split_half=50,
                         ccs_threshold=None, n_ica_components=None,
-                        do_cca=True, mask=None,
+                        mask=None, smooth=None,
                         threshold_p_value=5e-3,
                         n_jobs=1, working_dir=None, report=False):
     """ CanICA with reproducibility test via split-half cross validation.
@@ -167,15 +167,16 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
             analysis.
         n_ica_components: float, optional
             Number of ICA to retain.
-        do_cca: boolean, optional
-            If True, a canonical correlations analysis (CCA) is used to
-            go from the subject patterns to the group model.
         mask: 3D boolean ndarray or string, optional
             The mask to use to extract the interesting time series.
             Can be either the array of the mask, or the name of a file
             containing the mask.
+        smooth: None or float
+            The spatial size of smoothness, in milimeters.
         threshold_p_value, float, optional
             The P value to use while thresholding the final ICA maps.
+            See [Varoquaux ISBI 2010] for the description of the null 
+            hypothesis.
         n_jobs: int, optional
             Number of jobs to start on a multi-processor machine.
             If -1, one job is started per CPU.
@@ -192,14 +193,13 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
 
     """
     # First do a full CanICA run, to have references and common mask:
-    reference_icas, mask, threshold, header = canica(filenames,
+    reference_icas, mask, threshold, header, mean = canica(filenames,
                                     n_pca_components=n_pca_components,
                                     n_ica_components=n_ica_components,
                                     ccs_threshold=ccs_threshold,
-                                    do_cca=do_cca,
-                                    mask=mask,
+                                    smooth=smooth, mask=mask,
                                     working_dir=working_dir,
-                                    n_jobs=n_jobs,
+                                    n_jobs=n_jobs, return_mean=True,
                                     report=report)
 
     # FIXME: We should generate our own report, rather than delegating to 
@@ -224,7 +224,7 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
         cachedir = pjoin(working_dir, 'cache')
     else:
         cachedir = None
-    memory = Memory(cachedir=cachedir, debug=True, mmap_mode='r')
+    memory = Memory(cachedir=cachedir, verbose=3, mmap_mode='r')
     correl = Parallel(n_jobs=n_jobs)(
                     delayed(memory.cache(canica_pair))(
                                             file_pair, n_pca_components,
@@ -232,7 +232,7 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
                                             reference_icas,
                                             n_ica_components=n_ica_components,
                                             ccs_threshold=ccs_threshold,
-                                            do_cca=do_cca,
+                                            smooth=smooth,
                                             working_dir=working_dir,
                                             n_jobs=1,
                                     )
@@ -266,6 +266,7 @@ Thresholded ICA maps
 
 """ % (report_stats(un_thr_stats),
        report_stats(thr_stats)))
+
 
     return reference_icas, mask, threshold, header, un_thr_stats, thr_stats, \
                         reproducibility
