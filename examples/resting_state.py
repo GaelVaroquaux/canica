@@ -28,7 +28,7 @@ session_files = [INPUT_GLOB % i for i in SUBJECTS]
 # CanICA estimation
 #-------------------------------------------------------------------------
 
-if 1:
+if 0:
     # Simply run CanICA
     icas, mask, threshold, header = \
                 canica(session_files, 

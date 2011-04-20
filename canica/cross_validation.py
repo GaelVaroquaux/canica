@@ -15,6 +15,7 @@ from joblib import Memory, Parallel, delayed
 
 # Local imports
 from .main import canica
+from .output import output
 
 ################################################################################
 # Utilities to compare maps
@@ -116,7 +117,8 @@ def canica_pair(file_pair, n_pca_components, mask, threshold,
     ica1, ica2 = [canica(files, n_pca_components, ccs_threshold=ccs_threshold,
                             n_ica_components=n_ica_components, 
                             mask=mask, smooth=smooth,
-                            n_jobs=n_jobs, working_dir=working_dir)
+                            n_jobs=n_jobs, working_dir=working_dir,
+                            report=False, save_nifti=False)
                         for files in file_pair]
 
     # Separate the maps from the mask and threshold in the canica
@@ -147,7 +149,8 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
                         ccs_threshold=None, n_ica_components=None,
                         mask=None, smooth=None,
                         threshold_p_value=5e-3,
-                        n_jobs=1, working_dir=None, report=False):
+                        n_jobs=1, working_dir=None, report=False, 
+                        save_nifti=True):
     """ CanICA with reproducibility test via split-half cross validation.
 
         Parameters
@@ -182,6 +185,9 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
             If -1, one job is started per CPU.
         working_dir: string, optional
             Optional directory name to use to store temporary cache.
+        save_nifti: boolean, optional
+            If save_nifti is True, a nifti file of the results is saved
+            in the working_dir.
         report: boolean, optional
             If report is True, an html report is saved in the
             working_dir.
@@ -192,6 +198,9 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
         indicate the final number of components.
 
     """
+    # Store the original mask value, for report
+    orig_mask = mask
+
     # First do a full CanICA run, to have references and common mask:
     reference_icas, mask, threshold, header, mean = canica(filenames,
                                     n_pca_components=n_pca_components,
@@ -200,10 +209,8 @@ def canica_split_half(filenames, n_pca_components, n_split_half=50,
                                     smooth=smooth, mask=mask,
                                     working_dir=working_dir,
                                     n_jobs=n_jobs, return_mean=True,
-                                    report=report)
-
-    # FIXME: We should generate our own report, rather than delegating to 
-    # CanICA.
+                                    report=False, 
+                                    save_nifti=False)
 
     # Generate a list of pairs
     these_files = copy.copy(filenames)
@@ -267,6 +274,29 @@ Thresholded ICA maps
 """ % (report_stats(un_thr_stats),
        report_stats(thr_stats)))
 
+    if save_nifti or report:
+        parameters = dict(
+                filenames=filenames,
+                n_pca_components=n_pca_components,
+                ccs_threshold=ccs_threshold,
+                n_ica_components=n_ica_components,
+                mask=orig_mask,
+                threshold_p_value=threshold_p_value,
+                smooth=smooth,
+                working_dir=working_dir,
+                n_split_half=n_split_half,
+            )
+        titles = ['map %i, reproducibility %.2f' % (i, r)
+                    for i, r in enumerate(reproducibility)
+                 ]
+        output(reference_icas, mask, threshold, header, 
+                working_dir=working_dir,
+                parameters=parameters,
+                mean=mean, 
+                titles=titles,
+                save_nifti=save_nifti, report=report)
+
+ 
 
     return reference_icas, mask, threshold, header, un_thr_stats, thr_stats, \
                         reproducibility
