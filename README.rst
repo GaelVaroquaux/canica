@@ -1,4 +1,3 @@
-
 ======================================
 CanICA: Canonical ICA for fMRI data
 ======================================
@@ -63,8 +62,8 @@ Currently, to install CanICA, you need to install:
       
     * **NiPy**: NeuroImaging in Python 
       http://nipy.sourceforge.net/nipy/stable/index.html
-      We suggest that you install the latest NeuroSpin branch of NiPy:
-      http://github.com/neurospin/nipy/zipball/master
+      We suggest that you install the latest development version of NiPy:
+      https://github.com/nipy/nipy/zipball/master
 
       You can check out the NiPy install instructions for more details:
       http://nipy.sourceforge.net/nipy/stable/users/installation.html
