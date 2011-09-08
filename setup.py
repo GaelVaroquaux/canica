@@ -19,12 +19,16 @@ if not 'extra_setuptools_args' in globals():
 
 ################################################################################
 # Automatic package discovery, cuz I am tired of forgetting to add them.
-def find_packages():
+def find_packages(path='.'):
     out_list = list()
-    for root, dirs, files in os.walk('.'):
-        if '__init__.py' in files:
-            package_path = '.'.join(root.split('/')[1:])
+    for file_name in os.listdir(path):
+        file_name = os.path.join(path, file_name)
+        if not os.path.isdir(file_name):
+            continue
+        if os.path.exists(os.path.join(file_name, '__init__.py')):
+            package_path = '.'.join(file_name.split('/')[1:])
             out_list.append(package_path)
+            out_list.extend(find_packages(path=file_name))
     return out_list
 
 
