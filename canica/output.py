@@ -45,9 +45,9 @@ def save_ics(icas, mask, threshold, output_dir, header, mean=None):
     icas = icas.T
     mask = mask.astype(np.bool)
 
-    if isinstance(header, Nifti1Header):
+    try:
         affine = header.get_best_affine()
-    else:
+    except:
         affine = header['sform']
         # XXX: I don't know how to convert a dictionnary to a
         # Nifti1Header.
