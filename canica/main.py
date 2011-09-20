@@ -275,7 +275,7 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
             header[key] = np.asarray(value).copy()
 
     # Use np.asarray to get rid of memmapped arrays
-    pcas = [np.asarray(pca[:, :n_pca_components].T) for pca in pcas]
+    pcas = [np.asarray(pca[:, :n_pca_components]).T for pca in pcas]
     variances = [np.asarray(variance[:n_pca_components])
                                             for variance in variances]
 
