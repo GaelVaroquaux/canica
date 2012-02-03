@@ -104,10 +104,24 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
     # extract the common mask.
     if mask is None:
         if not two_levels:
-            mask = cache(mask_utils.compute_mask_sessions)(session_files)
+            try:
+                mask, mean = cache(mask_utils.compute_mask_sessions)(
+                            session_files, return_mean=True)
+            except TypeError:
+                # Older versions of nipy: no 'return_mean' option
+                mask = cache(mask_utils.compute_mask_sessions)(
+                                session_files)
+                mean = None
         else:
-            mask = cache(mask_utils.compute_mask_sessions)(
-                                            itertools.chain(*session_files))
+            try:
+                mask, mean = cache(mask_utils.compute_mask_sessions)(
+                                            itertools.chain(*session_files),
+                                            return_mean=True)
+            except TypeError:
+                # Older versions of nipy: no 'return_mean' option
+                mask = cache(mask_utils.compute_mask_sessions)(
+                                        itertools.chain(*session_files))
+                mean = None
     elif isinstance(mask, basestring):
         mask = load(mask).get_data().astype(np.bool)
  
@@ -120,7 +134,7 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
                                     for filenames in session_files)
     pcas, pca_loadings, headers = zip(*session_pcas)
 
-    return pcas, mask, pca_loadings, headers[0]
+    return pcas, mask, pca_loadings, headers[0], mean
 
 
 ################################################################################
@@ -150,6 +164,10 @@ def extract_group_components(subject_components, variances,
                 cachedir=None):
     # Use asarray to cast to a non memmapped array
     subject_components = np.asarray(subject_components)
+    if len(subject_components) == 1:
+        # We are in a single subject case
+        return subject_components[0, :n_group_components].T, \
+                variances[0][:n_group_components]
 
     # The group components (concatenated subject components)
     group_components = subject_components.T
@@ -259,13 +277,15 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
         cachedir = pjoin(working_dir, 'cache')
     else:
         cachedir = None
-    pcas, mask, variances, header = extract_subject_components(filenames,
+    pcas, mask, variances, header, mean = extract_subject_components(filenames,
                                             n_jobs=n_jobs,
                                             mask=mask,
                                             two_levels=two_levels,
                                             n_first_components=n_pca_components,
                                             cachedir=cachedir,
                                             smooth=smooth)
+    if mean is not None:
+        mean = mean[mask]
     # Get rid of memmapping in the header:
     if (hasattr(header, '_header_data') 
             and isinstance(header._header_data, np.ndarray)):
@@ -283,11 +303,16 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
                                         variances, ccs_threshold=ccs_threshold,
                                         n_group_components=n_ica_components,
                                         cachedir=cachedir)
-
     ica_maps = ica_step(group_components, group_variance, cachedir=cachedir)
 
     threshold = (stats.norm.isf(0.5*threshold_p_value)
                                 /np.sqrt(ica_maps.shape[0]))
+
+    if mean is None:
+        mean = group_components.T[0]
+    # Normalize a bit the contrast of the mean
+    mean -= mean.min()
+    mean += .05*mean.max()
 
     if save_nifti or report:
         parameters = dict(
@@ -302,11 +327,11 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
             )
         output(ica_maps, mask, threshold, header, working_dir=working_dir,
                 parameters=parameters,
-                mean=group_components.T[0], 
+                mean=mean, 
                 save_nifti=save_nifti, report=report)
 
     if not return_mean:
         return ica_maps, mask, threshold, header
     else:
-        return ica_maps, mask, threshold, header, group_components.T[0]
+        return ica_maps, mask, threshold, header, mean
 
