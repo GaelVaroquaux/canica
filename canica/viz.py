@@ -14,9 +14,11 @@ import pylab as pl
 try:
     from nipy.neurospin import viz
     from nipy.neurospin.datasets import VolumeImg
+    from nipy.neurospin.datasets.transforms.transform import CompositionError
 except:
     from nipy.labs import viz
     from nipy.labs.datasets import VolumeImg
+    from nipy.labs.datasets.transforms.transform import CompositionError
 
 from .tools import markup
 
@@ -48,7 +50,11 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
         os.makedirs(output_dir)
     if mean_img is not None:
         img = VolumeImg(mean_img, affine=affine, world_space='mine')
-        img = img.xyz_ordered()
+        try:
+            img = img.xyz_ordered()
+        except CompositionError:
+            # That's fine, we'll just take it in diagonal
+            pass
         kwargs['anat'] = img.get_data()
         kwargs['anat_affine'] = img.affine
 
@@ -62,7 +68,11 @@ def plot_ics(maps3d, affine, output_dir, titles=None,
         # XYZ order the images, this should be done in the viz
         # code.
         img = VolumeImg(map3d, affine=affine, world_space='mine')
-        img = img.xyz_ordered()
+        try:
+            img = img.xyz_ordered()
+        except CompositionError:
+            # That's fine, we'll just take it in diagonal
+            pass
         map3d = img.get_data()
         this_affine = img.affine
         x, y, z = viz.find_cut_coords(map3d, activation_threshold=1e-10)
