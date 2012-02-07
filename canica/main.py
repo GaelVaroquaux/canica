@@ -101,6 +101,7 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
     memory = Memory(cachedir=cachedir, mmap_mode='r')
     cache = memory.cache
 
+    mean = None
     # extract the common mask.
     if mask is None:
         if not two_levels:
@@ -111,7 +112,6 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
                 # Older versions of nipy: no 'return_mean' option
                 mask = cache(mask_utils.compute_mask_sessions)(
                                 session_files)
-                mean = None
         else:
             try:
                 mask, mean = cache(mask_utils.compute_mask_sessions)(
@@ -121,7 +121,6 @@ def extract_subject_components(session_files, mask=None, n_jobs=1,
                 # Older versions of nipy: no 'return_mean' option
                 mask = cache(mask_utils.compute_mask_sessions)(
                                         itertools.chain(*session_files))
-                mean = None
     elif isinstance(mask, basestring):
         mask = load(mask).get_data().astype(np.bool)
  
@@ -290,6 +289,9 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
     if (hasattr(header, '_header_data') 
             and isinstance(header._header_data, np.ndarray)):
         header._header_data = np.asarray(header._header_data).copy()
+    if (hasattr(header, '_structarr') 
+            and isinstance(header._structarr, np.ndarray)):
+        header._structarr = np.asarray(header._structarr).copy()
     for key, value in header.items():
         if isinstance(value, np.ndarray):
             header[key] = np.asarray(value).copy()
