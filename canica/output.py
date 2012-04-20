@@ -84,7 +84,7 @@ def save_ics(icas, mask, threshold, output_dir, header, mean=None):
     mask_header = header.copy()
     mask_header['cal_min'] = 0
     mask_header['cal_max'] = 1
-    save(Nifti1Image(mask, affine, header=mask_header),
+    save(Nifti1Image(mask.astype(np.int), affine, header=mask_header),
                         pjoin(output_dir, 'mask.nii')
                         )
 
