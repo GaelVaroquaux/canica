@@ -312,6 +312,8 @@ def canica(filenames, n_pca_components, ccs_threshold=None,
 
     if mean is None:
         mean = group_components.T[0]
+    # Use np.asarray to get rid of memmapped arrays
+    mean = np.asarray(mean.__array__()).copy()
     # Normalize a bit the contrast of the mean
     mean -= mean.min()
     mean += .05*mean.max()
