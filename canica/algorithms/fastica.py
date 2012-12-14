@@ -138,8 +138,7 @@ def fastica(X, n_comp=None,
     w_init : (n_comp,n_comp) array
              Initial un-mixing array of dimension (n.comp,n.comp).
              If None (default) then an array of normal r.v.'s is used
-    source_only: if True, only the sources matrix is returned
-
+ 
     Results
     -------
     K : (n_comp, p) array
