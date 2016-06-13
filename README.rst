@@ -2,6 +2,8 @@
 CanICA: Canonical ICA for fMRI data
 ======================================
 
+**Do not use this code: it is outdated and no longer maintained. Use the code in nilearn** http://nilearn.github.io/
+
 What is CanICA?
 ================
 
